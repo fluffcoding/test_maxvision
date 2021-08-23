@@ -1,0 +1,21 @@
+<script type="text/x-template" id="v-test-item">
+    <!-- <div class=" item " :class="{expanded: isOpen,}" style="width: 10rem;" @click="toggleOpen" v-if="isRoot && item.key"> -->
+<!-- @click="selectItem(item)" -->
+<!-- <input @click="selectItem(item)" type="checkbox" class="" value=""> -->
+<div class="item" :class="{expanded: isSelected,}" style="user-select: none;">
+    <div class="inner-item"  style="width: 10rem;" @click="toggleOpen">
+        <span v-if="item.key">
+
+            ${item.key}
+            <!-- ${isSelected} -->
+            <span class="badge badge-warning">${item.values.length}</span>
+            <i class="fas fa-arrow-circle-right float-right" style="opacity: 0.6; font-size: 16px;"></i>
+        </span>
+        <!-- <span v-else>
+                    ${item.product_characteristics_reference}
+
+                </span> -->
+    </div>
+</div>
+<!-- </div> -->
+</script>

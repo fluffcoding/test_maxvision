@@ -1,0 +1,213 @@
+{% extends 'base.html' %}
+
+{% block content %}
+{% include 'components/templates/v-table.html' %}
+{% include 'components/templates/v-spinner.html' %}
+{% include 'components/templates/v-modal.html' %}
+<div id="app">
+    <v-modal v-show="modalOn" :content="modalContent" :status="modalStatus">
+    </v-modal>
+    <div class="row">
+        <div class="col-lg-9">
+            <v-table :labels="myLabels" :filtered="rawData" :pk="key" @select-row="selectedRow"
+                :selected-item="selected"></v-table>
+        </div>
+        <div class="col-lg-3">
+            <div class="card">
+                <div class="card-body">
+                    <form style="font-size: 14px;" v-if="selected" @submit.prevent>
+                        <div class="mb-1">
+                            <div class="input-group flex-nowrap">
+                                <input class="form-control" v-model="newProduct.title" placeholder="title"
+                                    aria-describedby="basic-addon1">
+                            </div>
+                        </div>
+                        <div class="mb-1">
+                            <div class="input-group flex-nowrap">
+                                <select class="form-control" v-model="newProduct.material">
+                                    <option v-for=" option in characteristics.materials"
+                                        :key="option.name">
+                                        ${option.name}</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mb-1">
+                            <div class="input-group flex-nowrap">
+                                <select class="form-control" v-model="newProduct.size">
+                                    <option v-for=" option in characteristics.size"
+                                        :key="option.name">
+                                        ${option.name}</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mb-1">
+                            <div class="input-group flex-nowrap">
+                                <select class="form-control" v-model="newProduct.category">
+                                    <option v-for=" option in characteristics.categories"
+                                        :key="option.name">
+                                        ${option.name}</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mb-1">
+                            <div class="input-group flex-nowrap">
+                                <select class="form-control" v-model="newProduct.color">
+                                    <option v-for=" option in characteristics.color"
+                                        :key="option.name">
+                                        ${option.name}</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mb-1">
+                            <div class="input-group flex-nowrap">
+                                <select class="form-control" v-model="newProduct.model">
+                                    <option v-for=" option in characteristics.model"
+                                        :key="option.name">
+                                        ${option.name}</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <button @click="updateItem()" class="btn btn-warning">Add to all products</button>
+                    </form>
+                    <div v-else>
+                        <p>Select an item to add it to all products.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+</div>
+{% include 'components/registeration/v-components.html' %}
+<script>
+    var app = new Vue({
+        el: '#app',
+        delimiters: ['${', '}'],
+        data: {
+            rawData: [],
+            myLabels: [
+                // ["Order Date", "order_date"],
+                ["Product ID", "id"],
+                ["Batch ID", "latest_batch_id"],
+                ["Title", "title"],
+                ["Reference", "characteristics_reference"],
+                ["Warehouse", "warehouse"],
+                ["Date Added", "date_created"],
+            ],
+            key: "id",
+            selected: null,
+            modalContent: '',
+            modalStatus: '',
+            modalOn: false,
+            characteristics: null,
+            newProduct: {},
+        },
+        methods: {
+            // referenceGenerator() {
+            //     var model = ''
+            //     var color = ''
+            //     var size = ''
+            //     var material = ''
+            //     var category = ''
+            //     if (this.newProduct.category) {
+            //         category = this.newProduct.category
+            //     }
+            //     if (this.newProduct.material) {
+            //         material = this.charClassification[3][1].find(mat => {
+            //             if (mat.characteristic_specification_nl == this.newProduct.material) {
+            //                 return true
+            //             }
+            //         })
+            //         material = material.specification_abbreviation
+            //     }
+            //     if (this.newProduct.size) {
+            //         size = this.charClassification[2][1].find(mat => {
+            //             if (mat.characteristic_specification_nl == this.newProduct.size) {
+            //                 return true
+            //             }
+            //         })
+            //         size = size.specification_abbreviation
+            //     }
+            //     if (this.newProduct.color) {
+            //         color = this.charClassification[1][1].find(mat => {
+            //             if (mat.characteristic_specification_nl == this.newProduct.color) {
+            //                 return true
+            //             }
+            //         })
+            //         color = color.specification_abbreviation
+            //     }
+            //     if (this.newProduct.model) {
+            //         model = this.charClassification[0][1].find(mat => {
+            //             if (mat.characteristic_specification_nl == this.newProduct.model) {
+            //                 return true
+            //             }
+            //         })
+            //         model = model.specification_abbreviation
+            //     }
+            //     var reference;
+            //     if (category == '' && model == '' && material == '' && size == '' && color == '') {
+            //         reference = ''
+            //     } else {
+            //         reference = `${category}/${model}{${material},${size},${color}`
+            //     }
+            //     this.newProduct.reference = reference
+            //     return reference
+            // },
+            refreshItems() {
+                this.rawData = [],
+                    this.selected = null,
+                    this.searchText = '',
+                    this.init()
+            },
+            showModal(status, content, timeout = 2000) {
+                this.modalOn = true;
+                this.modalContent = content
+                this.modalStatus = status
+                setTimeout(() => {
+                    this.modalOn = false
+                }, timeout);
+            },
+            selectedRow(item) {
+                this.selected = item;
+            },
+            async init() {
+                axios.defaults.xsrfCookieName = 'csrftoken';
+                axios.defaults.xsrfHeaderName = 'X-CSRFToken';
+
+                await axios
+                    .get('/product/incomplete-list')
+                    .then(response => this.rawData = response.data)
+
+
+                await axios
+                    .get('/product/all-characteristics')
+                    .then(response => this.characteristics = response.data)
+                console.log(this.characteristics)
+                
+            },
+            async updateItem() {
+
+                await axios({
+                    method: 'post',
+                    url: `add-characteristic`,
+                    xstfCookieName: 'csrftoken',
+                    xsrfHeaderName: 'X-CSRFToken',
+                    data: {
+                        selected: this.selected,
+                        data: this.newProduct,
+                    },
+                    headers: {
+                        'X-CSRFToken': 'csrftoken',
+                    }
+                }).then(response => this.showModal('success', response.data))
+                this.refreshItems()
+            },
+        },
+        mounted() {
+            this.init()
+        }
+    })
+</script>
+{% endblock %}

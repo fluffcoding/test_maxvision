@@ -1,0 +1,131 @@
+{% extends 'base.html' %}
+
+
+
+{% block content %}
+{% include 'components/templates/v-item.html' %}
+{% include 'components/templates/v-table.html' %}
+{% include 'components/templates/v-spinner.html' %}
+{% include 'components/templates/v-toolbar.html' %}
+{% include 'components/templates/v-modal.html' %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.1/papaparse.min.js"
+    integrity="sha512-EbdJQSugx0nVWrtyK3JdQQ/03mS3Q1UiAhRtErbwl1YL/+e2hZdlIcSURxxh7WXHTzn83sjlh2rysACoJGfb6g=="
+    crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<div id="app">
+    <h3 v-if="batchGroup">Batch Group #${batchGroup.id}</h3>
+    <label>Upload CSV from supplier<br>
+        <input type="file" id="file" ref="file" v-on:change="handleFileUpload()" accept=".csv" />
+    </label>
+
+    <!-- <button v-on:click="submitFile()">Submit</button> -->
+    <!-- ${csvData} -->
+    
+    <div class="row">
+        <div class="col-6">
+            <h4>Batches Sent</h4>
+            <v-table v-if="filteredBatch() != undefined" :filtered="filteredBatch()" :labels="myLabels" :pk="key">
+            </v-table>
+        </div>
+        <div class="col-6">
+            <h4>Batches Uploaded</h4>
+            <v-table :filtered="csvData" :labels="myLabels" :pk="key"></v-table>
+        </div>
+    </div>
+    <div class="text-center" v-if="csvData">
+        <button class="btn btn-dark" @click="confirmOrder()">Order Batch Group</button>
+    </div>
+    <!-- <div v-for="batch in filteredBatch()" :key="batch.id" class="card p-2 m-1">
+        ${batch}
+    </div> -->
+</div>
+{% include 'components/registeration/v-components.html' %}
+
+
+<script>
+    const id = {{ id| safe}}
+
+    var app = new Vue({
+        el: '#app',
+        delimiters: ['${', '}'],
+        data: {
+            batchGroup: null,
+            allBatches: [],
+            file: null,
+            csvData: null,
+            myLabels: [
+                ["Batch ID", "id"],
+                ["Product ID", "product_id"],
+                ["Quantity", "quantity"],
+                ["Price", "price"],
+                // ["Expected Delivery Date", "expected_delivery_date"],
+                // ["Receipt Date", "receipt_date"],
+                // ["Total Price", "total_price"],
+            ],
+            key: 'id',
+        },
+        methods: {
+            async confirmOrder() {
+
+                await axios({
+                    method: 'post',
+                    url: `/purchase/batch-group-confirm`,
+                    xstfCookieName: 'csrftoken',
+                    xsrfHeaderName: 'X-CSRFToken',
+                    data:  
+                    {
+                        'csv': this.csvData,
+                        'bg': this.batchGroup,
+                    },
+                    headers: {
+                        'X-CSRFToken': 'csrftoken',
+                    }
+                }).then(response => console.log(response.data))
+
+                window.close()
+                //this.showModal('success', response.data)
+            },
+            handleFileUpload() {
+                this.file = this.$refs.file.files[0];
+                Papa.parse(this.file, {
+                    header: true,
+                    complete: (results) => {
+                        this.csvData = results.data
+                        console.log(this.csvData)
+                    },
+
+                });
+
+            },
+            filteredBatch() {
+                if (this.batchGroup) {
+                    var filtered = this.allBatches.filter(el => {
+                        if (this.batchGroup.batches.includes(el.id)) {
+                            return true;
+                        }
+                    })
+                    return filtered;
+                }
+            },
+            async init() {
+                axios.defaults.xsrfCookieName = 'csrftoken';
+                axios.defaults.xsrfHeaderName = 'X-CSRFToken';
+
+                await axios
+                    .get(`/purchase/batch-group-single/${id}/`)
+                    .then(response => (this.batchGroup = response.data))
+
+                await axios
+                    .get('/purchase/batch-list')
+                    .then(response => (this.allBatches = response.data))
+
+
+            }
+        },
+        mounted() {
+            this.init()
+        }
+    })
+
+
+</script>
+{% endblock %}

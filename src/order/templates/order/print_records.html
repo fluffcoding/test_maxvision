@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-9">
+        {% for record in records %}
+        <div class="card">
+            <div class="card-body">
+                <h4>Created {{record.created|timesince}} ago on <span style="font-size: 14px;">on
+                        {{record.created}}</span></h4>
+                <p>Contains {{record.orders.all|length}} orders</p>
+                <a href="{% url 'order:print-view' record.id %}" target='__blank' class="btn btn-warning">
+                    Print Again
+                    <i class="fas fa-print"></i>
+                </a>
+            </div>
+
+        </div>
+
+        {% empty %}
+        <p>You have no print records. Print some orders to automatically generate records.</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

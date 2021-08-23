@@ -1,0 +1,858 @@
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% block content %}
+
+
+<link rel="stylesheet" href="{% static 'css/treeview.css' %}">
+
+{% include 'components/templates/v-item.html' %}
+{% include 'components/templates/v-test-item.html' %}
+
+{% include 'components/templates/v-table.html' %}
+{% include 'components/templates/v-selected.html' %}
+{% include 'components/templates/v-toolbar.html' %}
+{% include 'components/templates/v-modal.html' %}
+{% include 'components/templates/v-spinner.html' %}
+
+<div id="app">
+    <v-modal v-show="modalOn" :content="modalContent" :status="modalStatus">
+    </v-modal>
+    <div class="row">
+        <div class="col-8">
+            <div v-if="classifiedSelectedNodes.source[0]">
+                ${classifiedSelectedNodes.source[0].data.key}
+            </div>
+            <!-- <v-selected :selections="selected"></v-selected> -->
+        </div>
+        <div class="col-1">
+            <i class="fas fa-redo-alt iconhover2 p-2 ml-3" style="border-radius: 50%; font-size: 22px;"
+                @click="refreshItems()"></i>
+        </div>
+        <div class="col-3">
+            <input class="form-control mb-3" placeholder="Search Customer Name or ID" v-model="searchText" />
+        </div>
+    </div>
+
+    <div class="row">
+
+        <div class="col-7" style=" margin-left: 0;">
+            <div class="card">
+                <p style="font-weight: 700; font-size: 15px;" class="p-1 bg-dark text-white">
+                    <span style="margin-right: 3rem"> </span>
+                    <span style="margin-right: 6rem">Source</span>
+                    <span style="margin-right: 6rem">Due Date</span>
+                    <span style="margin-right: 6rem">Status</span>
+                    <span style="margin-right: 6rem">Category</span>
+                    <span>Product</span>
+                </p>
+                <div v-if="loading" class="text-center ">
+                    <div>
+                        <v-spinner></v-spinner>
+
+                    </div>
+                </div>
+                <div v-else>
+                    <div class="tree-container">
+                        <!-- <div class="list-container">
+                            <div class="list" v-for="item in classifiedNodes.source" :key="item.key">
+                                <v-test-item :item="item"></v-test-item>
+                            </div>
+                        </div> -->
+                        <div class="list-container">
+                            <div class="list">
+                                <v-test-item v-for="item, id in dataTable.source" :key="item.key + id" :item="item"
+                                    @selected-item="addToSelected" :hierarchy="hier"></v-test-item>
+                            </div>
+                            <div class="list">
+                                <v-test-item v-for="item, id in dataTable.due_date" :key="item.key + id" :item="item"
+                                    @selected-item="addToSelected" :hierarchy="hier"></v-test-item>
+                            </div>
+                            <div class="list">
+                                <v-test-item v-for="item, id in dataTable.status" :key="item.key + id" :item="item"
+                                    @selected-item="addToSelected" :hierarchy="hier"></v-test-item>
+                            </div>
+                            <div class="list">
+                                <v-test-item v-for="item, id in dataTable.category" :key="item.key + id" :item="item"
+                                    @selected-item="addToSelected" :hierarchy="hier"></v-test-item>
+                            </div>
+                            <div class="list">
+                                <v-test-item v-for="item, id in dataTable.product" :key="item.key + id" :item="item"
+                                    @selected-item="addToSelected" :hierarchy="hier"></v-test-item>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- ${dataTable} -->
+
+                    <!-- <tree-item :item="treeData" @selected-item="addToSelected" :hierarchy="hier"></tree-item> -->
+                </div>
+            </div>
+
+        </div>
+        <div class="col-5">
+            <!-- <div v-if="ctrlPressed && multiselectFilter().length>0">
+                <v-table :filtered="multiselectFilter()" :labels="myLabels" :pk="key" @select-row="selectedRow"
+                    :selected-item="selectedItem"></v-table>
+            </div> -->
+            <div v-if="searchText!=''">
+                <v-table :filtered="searchItems()" :labels="myLabels" :pk="key" @select-row="selectedRow"
+                    :selected-item="selectedItem"></v-table>
+            </div>
+            <div v-else>
+                <v-table :filtered="filteredItems()" :labels="myLabels" :pk="key" @select-row="selectedRow"
+                    :selected-item="selectedItem"></v-table>
+            </div>
+        </div>
+    </div>
+    <v-toolbar>
+        <div class="tooltip2">
+            <i class="fas fa-hand-pointer p-3 iconhover" @click="updateItems('selected')"></i>
+            <span class="tooltiptext2 fade-in">Select</span>
+        </div>
+        <div class="tooltip2">
+            <i class="fas fa-paper-plane p-3 iconhover" @click="updateItems('sent')"></i>
+            <span class="tooltiptext2  fade-in">Sent</span>
+        </div>
+        <div class="tooltip2">
+            <i class="fas fa-check p-3 iconhover" @click="updateItems('fulfilled')"></i>
+            <span class="tooltiptext2  fade-in">Fulfilled</span>
+        </div>
+        <div class="tooltip2">
+            <i class="fas fa-spinner p-3 iconhover" @click="updateItems('unfulfilled')"></i>
+            <span class="tooltiptext2  fade-in">Unfulfilled</span>
+        </div>
+        <div class="tooltip2">
+            <i class="fas fa-times p-3 iconhover" @click="updateItems('cancelled')"></i>
+            <span class="tooltiptext2  fade-in">Cancelled</span>
+        </div>
+        <div class="tooltip2">
+            <i class="fas fa-redo p-3 iconhover" @click="updateItems('resent')"></i>
+            <span class="tooltiptext2  fade-in">Resend</span>
+        </div>
+        <div class="tooltip2">
+            <i class="fas fa-print p-3 iconhover" @click="printItems()"></i>
+            <span class="tooltiptext2  fade-in">Print</span>
+        </div>
+    </v-toolbar>
+
+    <div v-if="ctrlPressed" style=" opacity: 0.8;">
+        <div class="toast align-items-center text-center text-white bg-dark border-0 show fade-in"
+            style=" position: fixed; right: 50rem; min-width: 250px; bottom: 80px;">
+            <div class="d-flex  text-center">
+                <div class="toast-body" style="font-size: 22px;">
+                    Multiselect <b>
+                        Active
+                    </b>
+                    <p style="font-size: 16px;">
+                        You have meow
+                        <!-- ${multiselectedNodes.length}
+                        selections. ${multiselectFilter().length} orders filtered based on your selection. -->
+                    </p>
+                    <!-- <button class="btn btn-light" @click="multiselectAnother()">Another selection</button> -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+
+
+{% include 'components/registeration/v-components.html' %}
+<script>
+
+    // Actual App Instance
+    var app = new Vue({
+        el: '#app',
+        delimiters: ['${', '}'],
+        data() {
+            return {
+                // treeData stores the processed hierarchical data fed to the treeview component
+                treeData: {},
+                // rawData stores the raw order items coming from the rest api
+                rawData: [],
+                // selected basically visually allows displaying the selected items on the frontend
+                // selected: {
+                //     source: [],
+                //     due_date: [],
+                //     status: [],
+                //     category: [],
+                //     product: []
+                // },
+                // the item selected in the table is represented by selectedItem
+                selectedItem: null,
+                // selectedNodes stores the nodes of the treeview that have been selected by clicking the checkbox
+                // selectedNodes: [],
+                // contains the d3.hierarchy() object for use in utility functions
+                hier: {},
+                // Indicates whether or not ctrl is pressed, used for multiselect mode
+                ctrlPressed: false,
+                // Search Text 
+                searchText: '',
+                // Contains the multiple selections during multiselect mode
+                multiselectedNodes: [],
+                // Allows loading
+                loading: true,
+                // Modal data
+                modalContent: '',
+                modalStatus: '',
+                modalOn: false,
+                // Labels and data fields for table
+                myLabels: [
+                    ["Name", "order_customer_name"],
+                    ["Order #", "order_id"],
+                    ["Item #", "product_id"],
+                    ["Quantity", "quantity"],
+                    ["Status", "order_status"],
+                    // ["Extra Info", "customer.extra_info"],
+                    // ["Last Modified", "last_"]
+                ],
+                // The key to be used within the table
+                key: 'id',
+                classifiedNodes: {
+                    source: [],
+                    due_date: [],
+                    status: [],
+                    category: [],
+                    product: [],
+                },
+                classifiedSelectedNodes: {
+                    source: [],
+                    due_date: [],
+                    status: [],
+                    category: [],
+                    product: [],
+                },
+                dataTable: {
+                    source: [],
+                    due_date: [],
+                    status: [],
+                    category: [],
+                    product: [],
+                },
+                classifiedData: {
+                    source: [],
+                    due_date: [],
+                    status: [],
+                    category: [],
+                    product: [],
+                }
+            }
+        },
+        methods: {
+            selectedRow(item) {
+                if (this.selectedItem !== item) {
+                    this.selectedItem = item
+
+                } else {
+                    this.selectedItem = null
+                }
+                // this.selected = item;
+
+            },
+            showModal(status, content, timeout = 2000) {
+                this.modalOn = true;
+                this.modalContent = content
+                this.modalStatus = status
+                setTimeout(() => {
+                    this.modalOn = false
+                }, timeout);
+            },
+            refreshItems() {
+                this.treeData = {}
+                this.rawData = []
+                this.selected = {
+                    source: [],
+                    due_date: [],
+                    status: [],
+                    category: [],
+                    product: []
+                }
+                // this.selectedNodes = []
+                this.hier = {}
+                this.loading = true;
+                this.init()
+            },
+            // multiselectAnother() {
+            //     this.multiselectedNodes.push(this.selectedNodes)
+            //     this.selectedNodes = []
+
+            // },
+            // multiselectFilter() {
+            //     var multiOrders = []
+            //     this.multiselectedNodes.forEach(selectedNode => {
+            //         var allLeaves = []
+            //         selectedNode.forEach(function (el) {
+            //             allLeaves.push(el.leaves())
+            //         })
+            //         var intersect = _.intersection(...allLeaves)
+            //         intersect.forEach(el => {
+            //             multiOrders.push(el.data)
+            //         })
+            //     })
+
+            //     return multiOrders
+            // },
+            searchItems() {
+                var filtered = [...(this.rawData.filter((item) => {
+                    if (item.order_customer_name.toLowerCase().includes(this.searchText.toLowerCase())) {
+                        return true
+                    }
+                    if (item.key == Number(this.searchText)) {
+                        return true
+                    }
+                }))]
+                return filtered
+
+            },
+            multiselectMode() {
+                this.ctrlPressed = !this.ctrlPressed
+            },
+
+            filteredItems() {
+                var commonLeaves = []
+                var allLeaves = []
+                // this.selectedNodes.forEach(function (el) {
+                //     allLeaves.push(el.leaves())
+                // })
+                // commonLeaves = (_.intersection(...allLeaves))
+                // var filtered = []
+                // commonLeaves.forEach(el => {
+                //     filtered.push(el.data)
+
+                // })
+                return commonLeaves
+            },
+
+            addOrRemoveItem(item, attribute, removed) {
+                // if (this.selected[attribute].includes(item)) {
+                //     this.selected[attribute].pop(item)
+                // } else {
+                //     this.selected[attribute].push(item)
+                // }
+                // if(removed) {
+                //     this.selected[attribute].pop(item)
+                // } else {
+                //     this.selected[attribute].push(item)
+                // }
+            },
+
+            addOrRemoveNode(item, attribute) {
+                const included = _.includes(this.classifiedSelectedNodes[attribute], item)
+                if (included) {
+                    this.classifiedSelectedNodes[attribute].pop(item)
+                } else {
+                    this.classifiedSelectedNodes[attribute].push(item)
+                }
+                // if (this.classifiedSelectedNodes[attribute].includes(item)) {
+                //     this.classifiedSelectedNodes[attribute].pop(item)
+                // } else {
+                //     this.classifiedSelectedNodes[attribute].push(item)
+
+            },
+            addToSelected(item, selected) {
+                var myNode = this.hier.descendants().find(node => {
+                    if (node.data == item) {
+                        return true
+                    }
+                })
+                // console.log(selected)
+                // console.log(this.selectedNodes)
+                // if (this.selectedNodes.includes(myNode)) {
+                //     removed = true
+                //     this.selectedNodes.pop(myNode)
+                // } else {
+                //     if (_.flattenDeep(this.multiselectedNodes).includes(myNode)) {
+                //     } else {
+                //         this.selectedNodes.push(myNode)
+                //     }
+                // }
+                if (myNode.depth == 1) {
+                    // console.log(this.classifiedSelectedNodes.source.includes(myNode))
+                    // if (this.classifiedSelectedNodes.source.includes(myNode)) {
+                    //     this.classifiedSelectedNodes.source.pop(myNode)
+                    // } else {
+
+                    //     this.classifiedSelectedNodes.source.push(myNode)
+                    // }
+                    this.addOrRemoveNode(myNode, 'source')
+                    // this.addOrRemoveItem(item.key, 'source', removed)
+
+                }
+                if (myNode.depth == 2) {
+                    this.addOrRemoveNode(myNode, 'due_date')
+                    // this.addOrRemoveItem(item.key, 'due_date')
+                    // this.$root.$emit('deselect-others', myNode)
+                }
+                if (myNode.depth == 3) {
+                    this.addOrRemoveNode(myNode, 'status')
+                    // this.$root.$emit('deselect-others', myNode)
+
+                    // this.addOrRemoveItem(item.key, 'status')
+                }
+                if (myNode.depth == 4) {
+                    this.addOrRemoveNode(myNode, 'category')
+                    // this.$root.$emit('deselect-others', myNode)
+
+                    // this.addOrRemoveItem(item.key, 'category')
+                }
+                if (myNode.depth == 5) {
+                    this.addOrRemoveNode(myNode, 'category')
+                    // this.$root.$emit('deselect-others', myNode)
+                    // this.addOrRemoveItem(item.key, 'product')
+                }
+                if (this.ctrlPressed) {
+                    // console.log(this.classifiedSelectedNodes)
+                } else {
+                    if (selected) {
+                        this.$root.$emit('deselect-others', myNode)
+                    }
+                }
+
+                this.treeMaker()
+                // console.log(this.classifiedSelectedNodes)
+            },
+            selectedItemIDs() {
+                if (this.ctrlPressed) {
+                    var items = this.multiselectFilter()
+                } else {
+                    var items = this.filteredItems();
+                }
+                var orderedProductsIDs = items.map(i => {
+                    return i.id
+                    // previously: return i.order_id (Changing from order to orderedproducts model)
+                })
+                var orderIDs = items.map(i => {
+                    return i.order_id
+                    // previously: return i.order_id (Changing from order to orderedproducts model)
+                })
+
+                let ids = {
+                    'ordered_products': orderedProductsIDs,
+                    'orders': orderIDs
+                }
+
+                return ids
+            },
+            printItems() {
+                const myData = this.selectedItemIDs()
+                axios({
+                    method: 'post',
+                    url: '/order/print/',
+                    xstfCookieName: 'csrftoken',
+                    xsrfHeaderName: 'X-CSRFToken',
+                    data: myData,
+                    headers: {
+                        'X-CSRFToken': 'csrftoken',
+                    }
+                }).then(response => window.open(`/order/print/${response.data}`));
+            },
+
+            async updateItems(changeTo) {
+
+                const updateData = {
+                    "ids": this.selectedItemIDs(),
+                    "change": changeTo,
+
+                };
+                await axios({
+                    method: 'post',
+                    url: '/order/update/',
+                    xstfCookieName: 'csrftoken',
+                    xsrfHeaderName: 'X-CSRFToken',
+                    data: updateData,
+                    headers: {
+                        'X-CSRFToken': 'csrftoken',
+                    }
+                }).then(response => this.showModal('success', response.data));
+                this.refreshItems()
+            },
+            async init() {
+                //setting defaults
+                axios.defaults.xsrfCookieName = 'csrftoken';
+                axios.defaults.xsrfHeaderName = 'X-CSRFToken';
+                //http://127.0.0.1:8000
+                await axios
+                    .get('/order/list')
+                    .then(response => (this.rawData = response.data))
+
+                // D3 - Making data hierarchical
+                var nester = d3.nest()
+
+                // Hierarchy on the basis of
+
+                var keys = nester.key(item => item.order_platform)
+                    .key(item => item.due_date)
+                    .key(item => item.order_status)
+                    .key(item => item.product_category)
+                    .key(item => item.product_characteristics_reference)
+
+                // Processing the Rest API data through d3
+
+                var entry = nester.entries(this.rawData)
+                var tree = {
+                    'key': '',
+                    'on': true,
+                    'values': entry
+                }
+
+                var h = d3.hierarchy(tree, item => item.values)
+
+                this.treeData = h.data
+                this.loading = false
+                this.hier = h
+                // this.hier.descendants.forEach(item => {
+                //     console.log(item)
+                // })
+                for (let i = 0; i < h.descendants().length; i++) {
+                    if (h.descendants()[i].depth == 1) {
+                        this.classifiedNodes.source.push(h.descendants()[i])
+                        this.classifiedData.source.push(h.descendants()[i].data)
+                    }
+                    if (h.descendants()[i].depth == 2) {
+                        this.classifiedNodes.due_date.push(h.descendants()[i])
+                        this.classifiedData.due_date.push(h.descendants()[i].data)
+                    }
+                    if (h.descendants()[i].depth == 3) {
+                        this.classifiedNodes.status.push(h.descendants()[i])
+                        this.classifiedData.status.push(h.descendants()[i].data)
+                    }
+                    if (h.descendants()[i].depth == 4) {
+                        this.classifiedNodes.category.push(h.descendants()[i])
+                        this.classifiedData.category.push(h.descendants()[i].data)
+                    }
+                    if (h.descendants()[i].depth == 5) {
+                        this.classifiedNodes.product.push(h.descendants()[i])
+                        this.classifiedData.product.push(h.descendants()[i].data)
+                    }
+                    // console.log(this.hier.descendants()[i])
+                }
+                // console.log(this.hier)
+
+                // for(let i=0; i < this.classifiedNodes.due_date.length; i++) {
+                //     console.log(this.classifiedNodes.due_date[i])
+                // }
+                this.dataTable.source = this.classifiedData.source
+            },
+            treeMaker() {
+
+
+                // Filtering Due Dates
+                due_date = this.classifiedNodes.due_date.filter(item => {
+                    if (this.classifiedSelectedNodes.source.includes(item.parent)) {
+                        return true
+                    }
+                    // console.log(item)
+                })
+                let toAdd = []
+                due_date.forEach(item => {
+                    // console.log(item)
+                    toAdd.push(item.data)
+                })
+
+                var keys = toAdd.map(function (item) { return item.key });
+                let repeated = []
+                let changesArray = []
+                keys.forEach((key, index) => {
+                    let id = _.indexOf(repeated, key)
+                    // console.log("ID"+ id)
+                    if (id >= 0) {
+                        changesArray.push(
+                            {
+                                toChange: id,
+                                toRemove: index
+                            }
+                        )
+                    } else {
+                        repeated.push(key)
+                    }
+                })
+
+                changesArray.forEach(change => {
+                    toAdd[change.toChange].values = _.union(toAdd[change.toChange].values, toAdd[change.toRemove].values)
+                })
+                changesArray.forEach(change => {
+                    toAdd.pop(change.toRemove)
+                })
+
+                // console.log(this.classifiedSelectedNodes.due_date)
+                this.dataTable.due_date = toAdd
+                // this.classifiedSelectedNodes.due_date = toAdd
+                // console.log(this.classifiedSelectedNodes.due_date)
+
+                // Filtering Status
+
+                if (this.classifiedSelectedNodes.due_date.length > 0) {
+                    myStatus = this.classifiedNodes.status.filter(item => {
+                        if (this.classifiedSelectedNodes.due_date.includes(item.parent)) {
+                            console.log("Neow")
+                            return true
+                        }
+                        else {
+                            console.log("Meow")
+                        }
+                    })
+                    console.log(myStatus)
+                    console.log(this.classifiedNodes.status)
+                    console.log(this.classifiedSelectedNodes.due_date)
+                    // console.log(JSON.stringify(status))
+                    let toAddStatus = []
+                    myStatus.forEach(item => {
+                        // console.log(item)
+                        toAddStatus.push(item.data)
+                    })
+
+                var keys = toAddStatus.map(function (item) { return item.key });
+                let repeated = []
+                let changesArray = []
+                keys.forEach((key, index) => {
+                    let id = _.indexOf(repeated, key)
+                    // console.log("ID"+ id)
+                    if (id >= 0) {
+                        changesArray.push(
+                            {
+                                toChange: id,
+                                toRemove: index
+                            }
+                        )
+                    } else {
+                        repeated.push(key)
+                    }
+                })
+
+                changesArray.forEach(change => {
+                    toAddStatus[change.toChange].values = _.union(toAddStatus[change.toChange].values, toAddStatus[change.toRemove].values)
+                })
+                changesArray.forEach(change => {
+                    toAddStatus.pop(change.toRemove)
+                })
+
+
+                    this.dataTable.status = toAddStatus
+                } else {
+                    this.dataTable.status = []
+                }
+
+                // console.log(status)
+
+
+
+
+                // console.log(this.classifiedSelectedNodes)
+                // let due_date = []
+                // // if (this.classifiedSelectedNodes.source.length === 1) {
+                // //     // for()
+                // //     this.classifiedSelectedNodes.source[0].children.forEach(node => {
+                // //         due_date.push(node.data)
+                // //     })
+                // //     // console.log(this.classifiedSelectedNodes.source[0].children)
+                // // }
+                // if (this.classifiedSelectedNodes.source.length >= 1) {
+                //     this.classifiedSelectedNodes.source.forEach(source => {
+                //         source.children.forEach(node => {
+                //             let addTo = due_date.find(item => {
+                //                 return item.key === node.data.key
+                //             })
+
+                //             // console.log("AddTO")
+                //             // console.log(addTo)
+                //             if (addTo) {
+                //                 let index = _.findIndex(due_date, addTo)
+
+                //                 // _.pull(due_date, addTo)
+                //                 // console.log(_.union(addTo.values, node.data.values))
+                //                 addTo.values.push(...node.data.values)
+                //                 due_date.splice(index, 1, addTo)
+                //                 // due_date.push(addTo)
+                //                 // console.log(addTo)
+                //             } else {
+                //                 due_date.push(node.data)
+                //             }
+
+                //         })
+                //     })
+                // }
+                // due_date = _.flattenDeep(due_date)
+                // this.dataTable.due_date = due_date
+
+
+                // let status = []
+                // if (this.classifiedSelectedNodes.due_date.length >= 1) {
+                //     this.dataTable.due_date.forEach(item => {
+                //         this.classifiedSelectedNodes.due_date.forEach(due_date => {
+                //             if (due_date.data === item) {
+                //                 due_date.children.forEach(node => {
+                //             let addTo = status.find(item => {
+                //                 return item.key === node.data.key
+                //             })
+
+                //             // console.log("AddTO")
+                //             // console.log(addTo)
+                //             if (addTo) {
+                //                 let index = _.findIndex(status, addTo)
+
+                //                 // _.pull(due_date, addTo)
+                //                 addTo.values.push(...node.data.values)
+                //                 status.splice(index, 1, addTo)
+                //                 // due_date.push(addTo)
+                //                 // console.log(addTo)
+                //             } else {
+                //                 status.push(node.data)
+                //             }
+
+                //         })
+                //             }
+
+                //         })
+                //         console.log(this.classifiedSelectedNodes.due_date)
+                //         // if(this.classifiedSelectedNodes.due_date.includes)
+                //         // console.log(item)
+
+                //     })
+                // }
+                // this.dataTable.status = status
+
+                // if (this.classifiedSelectedNodes.due_date.length >= 1) {
+                //     this.classifiedSelectedNodes.due_date.forEach(due_date => {
+                //         due_date.children.forEach(node => {
+                //             let addTo = status.find(item => {
+                //                 return item.key === node.data.key
+                //             })
+
+                //             // console.log("AddTO")
+                //             // console.log(addTo)
+                //             if (addTo) {
+                //                 let index = _.findIndex(status, addTo)
+
+                //                 // _.pull(due_date, addTo)
+                //                 addTo.values.push(node.data.values)
+                //                 status.splice(index, 1, addTo)
+                //                 // due_date.push(addTo)
+                //                 console.log(addTo)
+                //             } else {
+                //                 status.push(node.data)
+                //             }
+
+                //         })
+                //     })
+                // }
+
+
+                // this.dataTable.due_date
+                // console.log(this.classifiedSelectedNodes)
+                // classifiedSelectedNodes: {
+                //     source: [],
+                //     due_date: [],
+                //     status: [],
+                //     category: [],
+                //     product: [],
+                // }
+
+                // Due_date Calculator
+                // console.log(this.classifiedSelectedNodes.source.length)
+                // if(this.classifiedSelectedNodes.source.length===0) {
+                //     this.dataTable.due_date = []
+                //     this.dataTable.status = []
+                //     this.dataTable.category = []
+                //     this.dataTable.product = []
+                //     console.log("Meow")
+                //     // this.selected.source = []
+                // }
+                // if(this.classifiedSelectedNodes.source.length===1) {
+                //     // console.log(this.classifiedSelectedNodes.source)
+                //     this.dataTable.due_date = this.classifiedSelectedNodes.source[0].data.values
+                //     // this.selected.source = this.classifiedSelectedNodes.source[0].data.key
+                // }
+                // // Status Calculator
+                // if(this.classifiedSelectedNodes.due_date.length===0) {
+                //     // this.selected.due_date = []
+                //     this.dataTable.status = []
+                // }
+                // else if(this.classifiedSelectedNodes.due_date.length===1) {
+                //     this.dataTable.status = this.classifiedSelectedNodes.due_date[0].data.values
+                //     // this.selected.due_date = this.classifiedSelectedNodes.due_date[0].data.key
+                // }
+                // // Category Calculator
+                // if(this.classifiedSelectedNodes.status.length===0) {
+                //     // this.selected.status = []
+                //     this.dataTable.category = []
+
+                // }
+                // if(this.classifiedSelectedNodes.status.length===1) {
+                //     this.dataTable.category = this.classifiedSelectedNodes.status[0].data.values
+                //     // this.selected.status = this.classifiedSelectedNodes.status[0].data.key
+                // }
+                // // Product Calculator
+                // if(this.classifiedSelectedNodes.category.length===0) {
+                //     // this.selected.category = []
+                //     this.dataTable.product = []
+                // }
+                // if(this.classifiedSelectedNodes.category.length===1) {
+                //     this.dataTable.product = this.classifiedSelectedNodes.category[0].data.values
+                // }
+            }
+        },
+        created() {
+            // this.myNode = this.hierarchy.descendants().find(node => {
+            //         if (node.data == this.item) {
+            //             return true
+            //         }
+            //     })
+            this.$root.$on('deselect-others', (selectedNode) => {
+                let myNode = this.hier.descendants().find(node => {
+                    if (node === selectedNode) {
+                        return true
+                    }
+                })
+                if (myNode.depth == 1) {
+                    this.classifiedSelectedNodes.source = []
+                    this.classifiedSelectedNodes.source.push(myNode)
+                }
+                if (myNode.depth == 2) {
+                    this.classifiedSelectedNodes.due_date = []
+                    this.classifiedSelectedNodes.due_date.push(myNode)
+                }
+                if (myNode.depth == 3) {
+                    this.classifiedSelectedNodes.status = []
+                    this.classifiedSelectedNodes.status.push(myNode)
+                }
+                if (myNode.depth == 4) {
+                    this.classifiedSelectedNodes.category = []
+                    this.classifiedSelectedNodes.category.push(myNode)
+                }
+                if (myNode.depth == 5) {
+                    this.classifiedSelectedNodes.product = []
+                    this.classifiedSelectedNodes.product.push(myNode)
+                }
+                // console.log(myNode)
+                // if(selectedNode.data===this.item) {
+                // }
+                // else {
+                //     if(this.myNode.depth === selectedNode.depth) {
+                //         this.isSelected = false
+                //     }
+                //     else {
+                //     }
+                // }
+
+            })
+        },
+        async mounted() {
+            this.init()
+            window.onkeydown = (e) => {
+                if (e.key == 'Control') {
+                    this.multiselectMode()
+                }
+            }
+            window.onkeyup = (e) => {
+                if (e.key == 'Control') {
+                    this.multiselectMode()
+                }
+            }
+        },
+
+
+    })
+</script>
+{% endblock %}

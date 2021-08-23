@@ -1,0 +1,206 @@
+<script>
+
+    // Defining the selected component
+    Vue.component("v-selected", {
+        delimiters: ['${', '}'],
+        template: '#v-selected',
+        props: [
+            'selections'
+        ],
+    })
+    // Defining the selected component
+    Vue.component("v-spinner", {
+        delimiters: ['${', '}'],
+        template: '#v-spinner',
+        props: {
+            table: {
+                default: false,
+                type: Boolean,
+            }
+        }
+    })
+    Vue.component("v-modal", {
+        delimiters: ['${', '}'],
+        template: '#v-modal',
+        props: [
+            'content',
+            'status'
+        ],
+    })
+    Vue.component("v-toolbar", {
+        delimiters: ['${', '}'],
+        template: '#v-toolbar',
+        props: [
+            'selections'
+        ],
+    })
+
+    
+    Vue.component("v-table", {
+        delimiters: ['${', '}'],
+        template: '#v-table',
+        props: [
+            'filtered',
+            'labels',
+            'pk',
+            'selectedItem'
+        ],
+        methods: {
+            selectItem(item) {
+                //if(this.selected)
+                    this.$emit('select-row', item)
+                //console.log(item)
+                //console.log(this.selectedItem)
+                //console.log(item == this.selected)
+            },
+            isSelected(item) {
+                if (item == this.selectedItem) {
+                    return true
+                } else {
+                    return false
+                }
+            }
+        }
+    })
+    // Defining the tree-item component
+    Vue.component("tree-item", {
+        delimiters: ['${', '}'],
+        template: '#single-item',
+        props: {
+            item: Object,
+            hierarchy: Object
+        },
+        data() {
+            return {
+                isOpen: false,
+                isSelected: false,
+            }
+        },
+        computed: {
+            isParent() {
+                return this.item.values && this.item.values.length
+            },
+            isRoot() {
+                if (this.item.on) {
+                    this.isOpen = true
+                    return false
+                }
+                return true
+            }
+        },
+        methods: {
+            toggleOpen() {
+                if (this.isParent) {
+                    this.isOpen = !this.isOpen;
+                    
+                }
+            },
+            //Calculates depth of node in hierarchy
+            depth() {
+                var myNode = this.hierarchy.descendants().find(node => {
+                    if (node.data == this.item) {
+                        return true
+                    }
+                })
+                return (myNode.depth)
+            },
+            //Finds Number of Children
+            childrenCount() {
+                var myNode = this.hierarchy.descendants().find(node => {
+                    if (node.data == this.item) {
+                        return true
+                    }
+                })
+                return (myNode.leaves().length)
+            },
+            selectItem(item) {
+                // console.log(item)
+                this.isSelected = !this.isSelected
+                this.$emit('selected-item', item)
+            },
+        }
+
+    });
+
+
+    Vue.component("v-test-item", {
+        delimiters: ['${', '}'],
+        template: '#v-test-item',
+        props: {
+            item: Object,
+            hierarchy: Object
+        },
+        data() {
+            return {
+                // isOpen: false,
+                isSelected: false,
+                myNode: null,
+            }
+        },
+        computed: {
+            isParent() {
+                return this.item.values && this.item.values.length
+            },
+            isRoot() {
+                if (this.item.on) {
+                    this.isOpen = true
+                    return false
+                }
+                return true
+            }
+        },
+        methods: {
+            toggleOpen() {
+                if (this.isParent) {
+                    // this.isOpen = !this.isOpen;
+                    this.isSelected = !this.isSelected
+                    this.$emit('selected-item', this.item, this.isSelected)
+                }
+            },
+            //Calculates depth of node in hierarchy
+            depth() {
+                var myNode = this.hierarchy.descendants().find(node => {
+                    if (node.data == this.item) {
+                        return true
+                    }
+                })
+                return (myNode.depth)
+            },
+            //Finds Number of Children
+            childrenCount() {
+                var myNode = this.hierarchy.descendants().find(node => {
+                    if (node.data == this.item) {
+                        return true
+                    }
+                })
+                return (myNode.leaves().length)
+            },
+            // selectItem(item) {
+            //     // console.log(item)
+            //     this.isSelected = !this.isSelected
+            //     this.$emit('selected-item', item)
+            // },
+        },
+        created() {
+            this.myNode = this.hierarchy.descendants().find(node => {
+                    if (node.data == this.item) {
+                        return true
+                    }
+                })
+            this.$root.$on('deselect-others', (selectedNode)=> {
+                if(selectedNode.data===this.item) {
+                }
+                else {
+                    if(this.myNode.depth === selectedNode.depth) {
+                        this.isSelected = false
+                    }
+                    else {
+                    }
+                }
+                
+            })
+        }
+
+
+    });
+</script>

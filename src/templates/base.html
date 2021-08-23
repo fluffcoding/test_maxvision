@@ -1,0 +1,77 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>MaxVision Admin</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <!-- <meta content="A fully featured admin theme which can be used to build CRM, CMS, etc." name="description">
+    <meta content="Coderthemes" name="author"> -->
+    <link rel="shortcut icon" href="{% static 'public/images/favicon.ico' %}">
+    <link rel="icon" href="favicon.ico">
+
+    {% include 'base_components/head.html' %}
+    <style>
+        
+        *::-webkit-scrollbar {
+  width: 4px;               /* width of the entire scrollbar */
+}
+
+*::-webkit-scrollbar-track {
+  background: #313a46;        /* color of the tracking area */
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: #ffbc00;    /* color of the scroll thumb */
+}
+table {
+    border-color: #313a46;
+    border-width: 1px;
+}
+    tbody {
+        display: block;
+        max-height: 400px;
+        overflow-y: scroll;
+    }
+    thead, tbody tr {
+        display: table;
+        width: 100%;
+        table-layout: fixed;/* even columns width , fix width of table too*/
+    }
+    thead {
+        width: 100%
+    }
+    
+    </style>
+
+</head>
+
+<body class="loading bg-light" data-layout="topnav">
+    <div class="wrapper">
+        <div class="content-page">
+            <div class="content">
+                <!-- Topbar Start -->
+                <div class="navbar-custom topnav-navbar topnav-navbar-dark p-3">
+
+                    {% include 'base_components/navbar.html' %}
+
+                    <div class="clearfix"></div>
+                </div>
+            </div>
+            <!-- end Topbar -->
+
+            <div class="ml-5 mr-5">
+                {% include 'base_components/title.html' %}
+                {% block content %}{% endblock %}
+            </div>
+        </div>
+        {% include 'base_components/footer.html' %}
+
+    </div>
+    </div>
+
+
+</body>
+
+</html>

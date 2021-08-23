@@ -1,0 +1,28 @@
+{% load static %}
+<script type="text/x-template" id="v-table">
+  <div>
+    <div style="position: absolute; left: 35%; top: 30%" v-if="filtered.length==0">
+        <v-spinner :table="true"></v-spinner>
+    </div>
+    <div  v-else >
+      <table class="table table-sm table-hover bg-light shadow">
+  
+      <thead class="bg-dark text-light">
+        <tr>
+          <th v-for="label in labels" :key="label[0]" scope="col">${label[0]}</th>
+        </tr>
+      </thead>
+      
+      <tbody>
+        <tr v-for="(item,index) in filtered" :key="item[pk]" @click="selectItem(item)" :class="{'bg-dark text-white fade-in': isSelected(item)}">
+          <th v-for="(prop,index) in labels" :key="'B'+index+item[prop[1]]" :scope="index==0 ? 'row':''">${item[prop[1]]} </th>
+        </tr>
+        
+      </tbody>
+      
+    </table>
+    </div>
+    
+</div>
+  
+</script>

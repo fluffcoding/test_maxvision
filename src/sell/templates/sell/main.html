@@ -1,0 +1,272 @@
+{% extends 'base.html' %}
+
+{% load static %}
+
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/treeview.css' %}">
+
+{% include 'components/templates/v-item.html' %}
+{% include 'components/templates/v-table.html' %}
+{% include 'components/templates/v-spinner.html' %}
+{% include 'components/templates/v-toolbar.html' %}
+{% include 'components/templates/v-modal.html' %}
+<div class="row">
+    
+    <div class="col-lg-12">
+        <div id="app">
+            <v-modal v-show="modalOn" :content="modalContent" :status="modalStatus">
+            </v-modal>
+            <v-toolbar>
+                <div class="tooltip2">
+                    <i class="fas fa-edit p-3 iconhover" @click="updateItem()"></i>
+                    <span class="tooltiptext2 fade-in">Update</span>
+                </div>
+                <div class="tooltip2">
+                    <i class="fas fa-trash-alt p-3 iconhover" @click="deleteItem()"></i>
+                    <span class="tooltiptext2 fade-in">Delete</span>
+                </div>
+            </v-toolbar>
+            <div class="row">
+                <div class="col-4">
+                    <input class="form-control mb-3" placeholder="Search AN" v-model="searchText" />
+                </div>
+                <div class="col-4">
+                </div>
+                <div class="col-2">
+                </div>
+                <div class="col-2">
+                    <div class="mb-3" v-if="selected">
+                        <input class="form-control" v-model="selected.delivery_date" type="date" name="date">
+                    </div>
+                    <div class="mb-3" v-else>
+                        <p>Select an item to modify.</p>
+                    </div>
+
+                </div>
+
+            </div>
+            <div class="row">
+                <div class="col-3">
+                    <div class="card">
+                        <p style="font-weight: 700; font-size: 15px;" class="p-1 bg-dark text-white">
+                            <span style="margin-right: 7rem">Category</span>
+                            <span>Product</span>
+                        </p>
+                        <div v-if="loading" class="text-center ">
+                            <div>
+                                <v-spinner></v-spinner>
+                            </div>
+                        </div>
+                        <div class="tree-container mt-2 mb-3" v-else>
+                            <tree-item :item="treeData" @selected-item="addToSelected" :hierarchy="hier"></tree-item>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-9">
+                    <div v-if="searchText!=''">
+                        <v-table :filtered="searchItems()" :labels="myLabels" :pk="key" @select-row="selectedRow"
+                            :selected-item="selected">
+                        </v-table>
+                    </div>
+                    <div v-else-if="selectedNodes.length==0 && searchText==''">
+                        <v-table :filtered="rawData" :labels="myLabels" :pk="key" @select-row="selectedRow"
+                            :selected-item="selected"></v-table>
+                    </div>
+
+                    <div v-else>
+                        <v-table :labels="myLabels" :filtered="filteredItems()" :pk="key" @select-row="selectedRow"
+                            :selected-item="selected">
+                        </v-table>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% include 'components/registeration/v-components.html' %}
+
+<script>
+    var app = new Vue({
+        el: '#app',
+        delimiters: ['${', '}'],
+        data: {
+            hier: {},
+            treeData: {},
+            rawData: [],
+            myLabels: [
+                ["Product", "product_characteristics_reference"],
+                ["Ad ID", "id"],
+                ["Ad Title", "title"],
+                ["EAN", "ean"],
+                ["Product ID", "product_id"],
+                ["Product Title", "product_title"],
+                ["Delivery Date", "delivery_date"],
+            ],
+            key: "id",
+            selected: null,
+            searchText: '',
+            modalContent: '',
+            loading: true,
+            modalStatus: '',
+            modalOn: false,
+            categoryClassification: [],
+            selectedCategory: null,
+            selectedNodes: []
+        },
+        methods: {
+            filteredItems() {
+                var commonLeaves = []
+                var allLeaves = []
+                this.selectedNodes.forEach(function (el) {
+                    allLeaves.push(el.leaves())
+                })
+                commonLeaves = (_.intersection(...allLeaves))
+                var filtered = []
+                commonLeaves.forEach(el => {
+                    filtered.push(el.data)
+                })
+                return filtered
+            },
+            addToSelected(item) {
+                var myNode = this.hier.descendants().find(node => {
+                    if (node.data == item) {
+                        return true
+                    }
+                })
+                if (this.selectedNodes.includes(myNode)) {
+                    this.selectedNodes.pop(myNode)
+                } else {
+                    if (_.flattenDeep(this.multiselectedNodes).includes(myNode)) {
+                    } else {
+                        this.selectedNodes.push(myNode)
+
+                    }
+                }
+            },
+            refreshItems() {
+                // this.rawData = [],
+                //     this.selected = null,
+                //     this.searchText = '',
+                //     this.loading = true;
+
+                // this.init()
+            },
+            showModal(status, content, timeout = 2000) {
+                this.modalOn = true;
+                this.modalContent = content
+                this.modalStatus = status
+                setTimeout(() => {
+                    this.modalOn = false
+                }, timeout);
+            },
+            selectedRow(item) {
+                if (this.selected !== item) {
+                    this.selected = item
+
+                } else {
+                    this.selected = null
+                }
+                // this.selected = item;
+
+            },
+            async updateItem() {
+                // axios.defaults.xsrfCookieName = 'csrftoken';
+                // axios.defaults.xsrfHeaderName = 'X-CSRFToken';
+
+                await axios({
+                    method: 'post',
+                    url: `/sell/update`,
+                    xstfCookieName: 'csrftoken',
+                    xsrfHeaderName: 'X-CSRFToken',
+                    data: this.selected,
+                    headers: {
+                        'X-CSRFToken': 'csrftoken',
+                    }
+                }).then(response => this.showModal('success', response.data))
+                this.refreshItems()
+            },
+            async deleteItem() {
+                // axios.defaults.xsrfCookieName = 'csrftoken';
+                // axios.defaults.xsrfHeaderName = 'X-CSRFToken';
+
+                await axios({
+                    method: 'post',
+                    url: `/sell/delete`,
+                    xstfCookieName: 'csrftoken',
+                    xsrfHeaderName: 'X-CSRFToken',
+                    data: this.selected,
+                    headers: {
+                        'X-CSRFToken': 'csrftoken',
+                    }
+                }).then(response => this.showModal('success', response.data))
+                this.refreshItems()
+            },
+            filterbyCategory() {
+                var categoryFilter = this.rawData.filter(item => {
+                    if (item.category == this.selectedCategory) {
+                        return true
+                    }
+                })
+                return categoryFilter
+
+            },
+            //this.showModal('success', response.data))
+            searchItems() {
+                var filtered = [...(this.rawData.filter((item) => {
+                    if (item.ean.toLowerCase().includes(this.searchText.toLowerCase())) {
+                        return true
+                    }
+
+                }))]
+                return filtered
+
+            },
+            async init() {
+                axios.defaults.xsrfCookieName = 'csrftoken';
+                axios.defaults.xsrfHeaderName = 'X-CSRFToken';
+
+                await axios
+                    .get('/sell/list')
+                    .then(response => (this.rawData = response.data))
+                // this.categoryClassification = (Array.from(d3.group(this.rawData, d => d.product_category)))
+
+                var nester = d3.nest()
+
+                // Hierarchy on the basis of
+
+                var keys = nester.key(item => item.product_category)
+                    .key(item => item.product_characteristics_reference)
+
+                // Processing the Rest API data through d3
+
+                var entry = nester.entries(this.rawData)
+
+
+                var tree = {
+                    'key': '',
+                    'on': true,
+                    'values': entry
+                }
+
+
+                // this.treeData = tree
+
+                var h = d3.hierarchy(tree, item => item.values)
+                this.treeData = h.data
+                this.loading = false
+
+                this.hier = h
+
+            }
+        },
+        mounted() {
+            this.init()
+
+
+        }
+
+    })
+</script>
+{% endblock %}

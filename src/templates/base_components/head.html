@@ -1,0 +1,244 @@
+{% load static %}
+<!-- <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title> -->
+<!--Scripts for Vue, D3 and Axios-->
+<script src="https://unpkg.com/vue"></script>
+<script src="https://cdn.jsdelivr.net/npm/d3@5.16.0/dist/d3.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.21.1/axios.min.js"
+    integrity="sha512-bZS47S7sPOxkjU/4Bt0zrhEtWx0y0CRkhEp8IckzK+ltifIIE9EMIMTuT/mEzoIMewUINruDBIR/jJnbguonqQ=="
+    crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<!-- <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.1/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-+0n0xVW2eSR5OomGNYDnhzAbDsOXxcvSN1TPprVMTNDbiYZCxYbOOl7+AMvyTG2x" crossorigin="anonymous"> -->
+<!-- <link href="{% static 'css/maxvision.css' %}" rel="stylesheet" type="text/css"> -->
+<script src="https://kit.fontawesome.com/ff00e4a8c7.js" crossorigin="anonymous"></script>
+<!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"
+    integrity="sha512-qTXRIMyZIFb8iQcfjXWCO8+M5Tbc38Qi5WzdPOYZHIlZpzBHG3L3by84BBBOiRGiEb7KKtAOAs5qYdUiZiQNNQ=="
+    crossorigin="anonymous" referrerpolicy="no-referrer"></script> -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js"
+    integrity="sha512-WFN04846sdKMIP5LKNphMaWzU7YpMyCU245etK3g/2ARYbPK9Ub18eG+ljU96qKRCWh+quCY7yefSmlkQw1ANQ=="
+    crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://d3js.org/d3-array.v2.min.js"></script>
+<!--Hyper Theme-->
+<link href="{% static 'css/vendor.css' %}" rel="stylesheet">
+<link href="{% static 'css/icons.css' %}" rel="stylesheet">
+<link href="{% static 'css/core.css' %}" rel="stylesheet">
+
+<style type="text/css">
+    @keyframes ldio-087gxamu4vtv-r {
+
+        0%,
+        100% {
+            animation-timing-function: cubic-bezier(0.2 0 0.8 0.8)
+        }
+
+        50% {
+            animation-timing-function: cubic-bezier(0.2 0.2 0.8 1)
+        }
+
+        0% {
+            transform: rotate(0deg)
+        }
+
+        50% {
+            transform: rotate(180deg)
+        }
+
+        100% {
+            transform: rotate(360deg)
+        }
+    }
+
+    @keyframes ldio-087gxamu4vtv-s {
+
+        0%,
+        100% {
+            animation-timing-function: cubic-bezier(0.2 0 0.8 0.8)
+        }
+
+        50% {
+            animation-timing-function: cubic-bezier(0.2 0.2 0.8 1)
+        }
+
+        0% {
+            transform: translate(-30px, -30px) scale(0)
+        }
+
+        50% {
+            transform: translate(-30px, -30px) scale(1)
+        }
+
+        100% {
+            transform: translate(-30px, -30px) scale(0)
+        }
+    }
+
+    .ldio-087gxamu4vtv>div {
+        transform: translate(0px, -15px)
+    }
+
+    .ldio-087gxamu4vtv>div>div {
+        animation: ldio-087gxamu4vtv-r 1s linear infinite;
+        transform-origin: 100px 100px;
+    }
+
+    .ldio-087gxamu4vtv>div>div>div {
+        position: absolute;
+        transform: translate(100px, 82px);
+    }
+
+    .ldio-087gxamu4vtv>div>div>div>div {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: #ffbc00;
+        animation: ldio-087gxamu4vtv-s 1s linear infinite;
+    }
+
+    .ldio-087gxamu4vtv>div>div:last-child {
+        animation-delay: -0.5s;
+    }
+
+    .ldio-087gxamu4vtv>div>div:last-child>div>div {
+        animation-delay: -0.5s;
+        background: #313a46;
+    }
+
+    .loadingio-spinner-interwind-u1ds5qh3ifq {
+        width: 200px;
+        height: 200px;
+        display: inline-block;
+        overflow: hidden;
+    }
+
+    .ldio-087gxamu4vtv {
+        width: 100%;
+        height: 100%;
+        position: relative;
+        transform: translateZ(0) scale(1);
+        backface-visibility: hidden;
+        transform-origin: 0 0;
+        /* see note above */
+    }
+
+    .ldio-087gxamu4vtv div {
+        box-sizing: content-box;
+    }
+</style>
+<style>
+    tr:hover {
+        cursor: pointer;
+    }
+
+    .tooltip2 {
+        position: relative;
+        display: inline-block;
+    }
+
+    .tooltiptext2 {
+        font-size: 18px;
+    }
+
+    .tooltip2 .tooltiptext2 {
+        visibility: hidden;
+        width: auto;
+        background-color: #383c4496;
+        color: #fff;
+        text-align: right;
+        border-radius: 100px;
+        /* border-top-left-radius: 20px;
+  border-bottom-left-radius: 20px; */
+        padding: 5px;
+        padding-left: 35px;
+        padding-right: 35px;
+
+        /* Position the tooltip */
+        top: 20px;
+        right: 105%;
+
+        position: absolute;
+        z-index: 1;
+    }
+
+    .tooltip2:hover .tooltiptext2 {
+        visibility: visible;
+    }
+
+    .iconhover {
+        width: 100%
+    }
+
+    .iconhover:hover {
+        color: #383c44;
+        cursor: pointer;
+        background-color: rgba(255, 255, 255, 0.596);
+    }
+
+    .iconhover2 {}
+
+    .iconhover2:hover {
+        background-color: #313a46;
+        color: white;
+        cursor: pointer;
+
+    }
+
+    .fade-in {
+        animation: fadeIn 0.3s;
+        -webkit-animation: fadeIn 0.3s;
+        -moz-animation: fadeIn 0.3s;
+        -o-animation: fadeIn 0.3s;
+        -ms-animation: fadeIn 0.3s;
+    }
+
+    @keyframes fadeIn {
+        0% {
+            opacity: 0;
+        }
+
+        100% {
+            opacity: 1;
+        }
+    }
+
+    @-moz-keyframes fadeIn {
+        0% {
+            opacity: 0;
+        }
+
+        100% {
+            opacity: 1;
+        }
+    }
+
+    @-webkit-keyframes fadeIn {
+        0% {
+            opacity: 0;
+        }
+
+        100% {
+            opacity: 1;
+        }
+    }
+
+    @-o-keyframes fadeIn {
+        0% {
+            opacity: 0;
+        }
+
+        100% {
+            opacity: 1;
+        }
+    }
+
+    @-ms-keyframes fadeIn {
+        0% {
+            opacity: 0;
+        }
+
+        100% {
+            opacity: 1;
+        }
+    }
+</style>

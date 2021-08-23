@@ -1,0 +1,232 @@
+{% extends 'base.html' %}
+
+{% block content %}
+{% include 'components/templates/v-table.html' %}
+{% include 'components/templates/v-modal.html' %}
+{% include 'components/templates/v-spinner.html' %}
+{% include 'components/templates/v-toolbar.html' %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/print-js/1.6.0/print.js" integrity="sha512-/fgTphwXa3lqAhN+I8gG8AvuaTErm1YxpUjbdCvwfTMyv8UZnFyId7ft5736xQ6CyQN4Nzr21lBuWWA9RTCXCw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<div id="app">
+    <v-modal v-show="modalOn" :content="modalContent" :status="modalStatus">
+    </v-modal>
+    
+    <v-toolbar>
+        <div class="tooltip2">
+            <i class="fas fa-print p-3 iconhover" @click="printLabel()"></i>
+            <span class="tooltiptext2 fade-in">Print Label</span>
+        </div>
+    </v-toolbar>
+    <div class="row">
+        <div class="col-4">
+            <input class="form-control mb-1" placeholder="Search Product Title" v-model="searchText" />
+        </div>
+        <div class="col-2">
+            <div class="">
+                <select class="form-control" v-model="selectedCategory">
+                    <option v-for="cat in categoryClassification" :key="cat[0]">${cat[0]}</option>
+                </select>
+            </div>
+
+        </div>
+        <div class="col-2">
+            <button class="btn btn-warning" @click="selectedCategory=null">Deselect</button>
+        </div>
+        <div class="col-lg-9">
+            <div v-if="searchText!=''">
+                <v-table :filtered="searchItems()" :labels="myLabels" @select-row="selectedRow"
+                    :selected-item="selected"></v-table>
+            </div>
+            <div v-else-if="selectedCategory!=null">
+                <v-table :filtered="filterbyCategory()" :labels="myLabels" @select-row="selectedRow"
+                    :selected-item="selected"></v-table>
+            </div>
+            <div v-else>
+                <v-table :labels="myLabels" :filtered="rawData" :pk="key" @select-row="selectedRow"
+                    :selected-item="selected"></v-table>
+            </div>
+
+        </div>
+
+        <div class="col-lg-3">
+            <div class="card">
+
+                <div class="card-body">
+                    <form style="font-size: 14px;" v-if="selected" @submit.prevent>
+                        <div class="mb-1">
+                            <div class="input-group flex-nowrap">
+                                <input class="form-control" v-model="selected.warehouse"
+                                    aria-describedby="basic-addon1">
+                            </div>
+                        </div>
+                        <div class="mb-1">
+                            <div class="input-group flex-nowrap">
+                                <input class="form-control" v-model="selected.category" aria-describedby="basic-addon1">
+                            </div>
+                        </div>
+                        <div class="mb-1">
+                            <div class="input-group flex-nowrap">
+                                <input class="form-control" v-model="selected.characteristics_reference" disabled
+                                    aria-describedby="basic-addon1">
+                            </div>
+                        </div>
+                        <div class="mb-1">
+                            <div class="input-group flex-nowrap">
+                                <input class="form-control" v-model="selected.title" aria-describedby="basic-addon1">
+                            </div>
+                        </div>
+                        <div class="mb-1">
+                            <div class="input-group flex-nowrap">
+                                <input class="form-control" v-model="selected.characteristics_material"
+                                    aria-describedby="basic-addon1">
+                            </div>
+                        </div>
+                        <div class="mb-1">
+                            <div class="input-group flex-nowrap">
+                                <input class="form-control" v-model="selected.characteristics_size"
+                                    aria-describedby="basic-addon1">
+                            </div>
+                        </div>
+                        <div class="mb-1">
+                            <div class="input-group flex-nowrap">
+                                <input class="form-control" v-model="selected.characteristics_color"
+                                    aria-describedby="basic-addon1">
+                            </div>
+                        </div>
+                        <div class="mb-1">
+                            <div class="input-group flex-nowrap">
+                                <input class="form-control" v-model="selected.functionality"
+                                    aria-describedby="basic-addon1">
+                            </div>
+                        </div>
+                        <div class="mb-1">
+                            <textarea class="form-control" v-model="selected.description"
+                                style="height: 100px;"></textarea>
+
+                        </div>
+                        <button @click="updateItem" class="btn btn-warning">Update</button>
+                    </form>
+                    <div v-else>
+                        <p>Select an item to change it</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div style="visibility: hidden;" class="row" v-if="selected" id="print-label">
+            <h1 style="font-size: 60px;">${selected.warehouse_number}</h1>
+            <h1 style="font-size: 60px;">${selected.category}</h1>
+            <h1 style="font-size: 60px;">${selected.characteristics_reference}</h1>
+    </div>
+</div>
+{% include 'components/registeration/v-components.html' %}
+<script>
+
+
+    var app = new Vue({
+        el: '#app',
+        delimiters: ['${', '}'],
+        data: {
+            rawData: [],
+            myLabels: [
+                ["id", "id"],
+                ["Warehouse", "warehouse"],
+                ["Category", "category"],
+                ["Product", "characteristics_reference"],
+                ["Title", "title"],
+                ["Material", "characteristics_material"],
+                ["Size", "characteristics_size"],
+                ["Color", "characteristics_color"],
+                ["Functionality", "functionality"],
+                //["Description", "description"]
+            ],
+            key: "reference",
+            selected: null,
+            searchText: '',
+            modalContent: '',
+            modalStatus: '',
+            modalOn: false,
+            categoryClassification: [],
+            selectedCategory: null,
+            printBoolean: false,
+        },
+        methods: {
+            printLabel() {
+                this.printBoolean = true;
+                printJS({ printable: 'print-label', type: 'html', targetStyle: ['font-size']})
+            },
+            refreshItems() {
+                this.rawData = [],
+                    this.selected = null,
+                    this.searchText = '',
+                    this.init()
+            },
+            showModal(status, content, timeout = 2000) {
+                this.modalOn = true;
+                this.modalContent = content
+                this.modalStatus = status
+                setTimeout(() => {
+                    this.modalOn = false
+                }, timeout);
+            },
+            selectedRow(item) {
+                this.selected = item;
+            },
+            async updateItem() {
+
+                await axios({
+                    method: 'post',
+                    url: `/product/update`,
+                    xstfCookieName: 'csrftoken',
+                    xsrfHeaderName: 'X-CSRFToken',
+                    data: this.selected,
+                    headers: {
+                        'X-CSRFToken': 'csrftoken',
+                    }
+                }).then(response => this.showModal('success', response.data))
+                this.refreshItems()
+            },
+            filterbyCategory() {
+                var categoryFilter = this.rawData.filter(item => {
+                    if (item.category == this.selectedCategory) {
+                        return true
+                    }
+                })
+                return categoryFilter
+
+            },
+            //this.showModal('success', response.data))
+            searchItems() {
+                var filtered = [...(this.rawData.filter((item) => {
+                    if (item.title.toLowerCase().includes(this.searchText.toLowerCase())) {
+                        return true
+                    }
+
+                }))]
+                return filtered
+
+            },
+            async init() {
+                axios.defaults.xsrfCookieName = 'csrftoken';
+                axios.defaults.xsrfHeaderName = 'X-CSRFToken';
+
+                await axios
+                    .get('/product/list')
+                    .then(response => (this.rawData = response.data))
+                this.categoryClassification = (Array.from(d3.group(this.rawData, d => d.category)))
+                // console.log((this.categoryClassification))
+                let cats = this.categoryClassification.map(cat => {
+                    return cat[0]
+                })
+                // console.log(cats)
+
+
+            }
+        },
+        mounted() {
+            this.init()
+
+
+        }
+    })
+</script>
+{% endblock %}

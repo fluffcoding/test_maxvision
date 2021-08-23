@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+{% include 'components/templates/v-item.html' %}
+{% include 'components/templates/v-table.html' %}
+{% include 'components/templates/v-spinner.html' %}
+{% include 'components/templates/v-toolbar.html' %}
+{% include 'components/templates/v-modal.html' %}
+
+<div id="app">
+    ${rawData}
+    <v-table :labels="myLabels" :filtered="rawData" :pk="key" @select-row="selectedRow"></v-table>
+    <v-toolbar>
+        <div class="tooltip2">
+            <i class="fas fa-hand-pointer p-3 iconhover"></i>
+            <span class="tooltiptext2 fade-in">Select</span>
+        </div>
+        <div class="tooltip2">
+            <i class="fas fa-paper-plane p-3 iconhover"></i>
+            <span class="tooltiptext2  fade-in">Sent</span>
+        </div>
+    </v-toolbar>
+
+</div>
+{% include 'components/registeration/v-components.html' %}
+
+<script>
+    
+    var app = new Vue({
+        el: '#app',
+        delimiters: ['${', '}'],
+        data: {
+            rawData: [],
+            myLabels: [
+                //["Description", "description"]
+                ["Date ", "sign_up_date"],
+                ["Order #", "order_number"],
+                ["Category", "category"],
+                ["Product", "product_reference"],
+                ["Return Request", "return_request"],
+                ["Status ", "return_status"],
+                ["Number", "number"],
+                ["Description", "return_description"],
+                ["First Name", "first_name"],
+                ["Last Name", "last_name"],
+                ["Reason Spec", "return_reason_spec"],
+            ],
+            key: "rmaid",
+            modalContent: '',
+            modalStatus: '',
+            modalOn: false,
+        },
+        methods: {
+            refreshItems() {
+                this.rawData = [],
+                    this.selected = null,
+                    this.searchText = '',
+                    this.init()
+            },
+            showModal(status, content, timeout = 2000) {
+                this.modalOn = true;
+                this.modalContent = content
+                this.modalStatus = status
+                setTimeout(() => {
+                    this.modalOn = false
+                }, timeout);
+            },
+            selectedRow(item) {
+                this.selected = item;
+            },
+            async init() {
+                axios.defaults.xsrfCookieName = 'csrftoken';
+                axios.defaults.xsrfHeaderName = 'X-CSRFToken';
+
+                await axios
+                    .get('/administer/returns-list')
+                    .then(response => (this.rawData = response.data))
+                //this.categoryClassification = (Array.from(d3.group(this.rawData, d => d.category)))
+                //console.log((this.categoryClassification))
+
+
+
+            }
+        },
+        mounted() {
+            this.init()
+        }
+    })
+</script>
+{% endblock %}

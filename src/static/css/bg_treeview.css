@@ -1,0 +1,129 @@
+.tree-container {
+    overflow-x: auto;
+    /* height: 100%; */
+    max-height: fit-content;
+  }
+  
+  .tree-container .list-container {
+    display: flex;
+    height: auto;
+  }
+  
+  /*# sourceMappingURL=Finder.vue.map */
+  .list {
+    display: flex;
+    flex-direction: column;
+    min-height: auto;
+    border-right: solid 1px rgba(204, 204, 204, 0.335);
+    overflow: auto;
+    flex-shrink: 0;
+  }
+  
+  .list [draggable=true] {
+    cursor: move;
+    cursor: grab;
+  }
+  
+  .last {
+    flex-grow: 1;
+  }
+  
+  /*# sourceMappingURL=FinderList.vue.map */
+  .item {
+  
+  
+    padding-left: 5px;
+    display: flex;
+    align-items: center;
+    position: relative;
+    max-width: 7rem;
+        
+  
+    /* border: dashed 1px transparent; */
+        
+  
+    cursor: pointer;
+    max-height: 6rem;
+  }
+  
+  /*# sourceMappingURL=FinderList.vue.map */
+  .item:hover {
+    background-color: #313a462f
+  }
+  
+  .item.expanded {
+    background-color: #313a46;
+    color: white;
+  }
+  
+  .item.dragged {
+    background-color: rgba(11, 121, 208, 0.5);
+  }
+  
+  .item.drag-over {
+    border-color: #0b79d0;
+    background-color: rgba(11, 121, 208, 0.2);
+  }
+  
+  .item.has-drag-handle .inner-item {
+    padding-left: 0;
+  }
+  
+  .item.no-drop {
+    color: gray;
+  }
+  
+  .item .inner-item {
+    flex: 1;
+    min-width: 0;
+    padding: 5px;
+  }
+  
+  .item:focus {
+    outline: none;
+  }
+  
+  .item .drag-handle {
+    fill: #bbb;
+    padding: 10px 1px 10px 0;
+    width: 15px;
+    height: 15px;
+    cursor: move;
+    cursor: grab;
+  }
+  
+  /*# sourceMappingURL=FinderItem.vue.map */
+  .drop-zone {
+    transition: height 0.1s ease;
+    height: 0.5em;
+    flex-shrink: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .drop-zone.drag-over {
+    opacity: 0.5;
+    margin-bottom: 0;
+    height: 2em;
+    border: dashed 3px #0b79d0;
+    background-color: rgba(11, 121, 208, 0.2);
+  }
+  
+  .no-drop * {
+    cursor: no-drop;
+  }
+  
+  /*# sourceMappingURL=FinderListDropZone.vue.map */
+  .arrow {
+    display: inline-block;
+    border-right: 3px solid black;
+    border-bottom: 3px solid black;
+    width: 6px;
+    height: 6px;
+    transform: rotate(-45deg);
+  }
+  
+  .arrow.expanded {
+    border-color: white;
+  }

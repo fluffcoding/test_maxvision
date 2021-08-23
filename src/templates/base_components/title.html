@@ -1,0 +1,47 @@
+<style>
+    .my {
+        color: #313a46;
+
+    }
+
+    .my:hover {
+        color: white;
+        background-color: #98a6ad;
+    }
+
+    .my-active {
+
+        background-color: #313a46;
+    }
+</style>
+<div class="row">
+    <div class="col-lg-6">
+        <ul class="nav nav-pills bg-nav-pills nav-justified mb-3">
+            {% for page in pages %}
+            {% if page.is_active %}
+            <li class="nav-item">
+                <a href="{{page.url}}" class="nav-link mt-2 rounded-0 my my-active text-white">
+                    <span class="">{{page.name}}</span>
+                </a>
+            </li>
+            {% else %}
+            <li class="nav-item">
+                <a href="{{page.url}}" class="nav-link mt-2 rounded-0 my">
+                    <span class="">{{page.name}}</span>
+                </a>
+            </li>
+            {% endif %}
+            {% endfor %}
+        </ul>
+    </div>
+    <div class="col-lg-6">
+        {% if title %}
+        <div class="card p-2 text-center text-dark mb-2"
+            style=" border-radius: 1rem; border-top-right-radius: 10rem;margin-top: -20px;   margin-right: auto;">
+            <span style="font-size: 22px;">
+                {{title}}
+            </span>
+        </div>
+        {% endif %}
+    </div>
+</div>

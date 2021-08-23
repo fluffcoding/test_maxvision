@@ -1,0 +1,54 @@
+{% load static %}
+
+<!-- <nav class="navbar navbar-dark bg-dark"> -->
+<!-- <div class="container-fluid"> -->
+<div class="row">
+  <div class="col-4">
+    <a class="navbar-brand ms-5 lead p-2 ml-5" style="font-size:25px;" href="#">
+      <img src="{% static 'public/maxlogo.png' %}" height="30" />
+    </a>
+  </div>
+  <div class="col-lg-7 col-md-12 mt-3">
+    <div class="row text-center ">
+      <div class="col itemhover" style="border-top-left-radius: 0.4rem; border-bottom-left-radius: 0.4rem;">
+        <a class="p-1 text-{{nav.dashboard}} " style="text-decoration: none;" href="#">
+          Dashboard
+        </a>
+      </div>
+      <div class="col text-center">
+        <a class="p-1 text-{{nav.orders}}" style="text-decoration: none;" href="{% url 'order:main' %}">
+          Orders
+        </a>
+      </div>
+      <div class="col itemhover">
+        <a class="p-1 text-{{nav.selling}} " style="text-decoration: none;" href="{% url 'sell:main' %}">
+          Selling
+        </a>
+      </div>
+      <div class="col itemhover">
+        <a class="p-1 text-{{nav.products}} " style="text-decoration: none;" href="{% url 'product:main' %}">
+          Products
+        </a>
+      </div>
+      <div class="col itemhover">
+        <a class="p-1 text-{{nav.purchasing}} " style="text-decoration: none;" href="{% url 'purchase:main' %}">
+          Purchasing
+        </a>
+      </div>
+      <div class="col itemhover">
+        <a class="p-1 text-{{nav.inventory}} " style="text-decoration: none;" href="{% url 'inventory:main' %}">
+          Inventory
+        </a>
+      </div>
+      <div class="col itemhover">
+        <a class="p-1 text-{{nav.administer}} " style="text-decoration: none;" href="{% url 'administer:returns' %}">
+          Administer
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+
+
+</script>

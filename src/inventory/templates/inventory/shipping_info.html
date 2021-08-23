@@ -1,0 +1,156 @@
+{% extends 'base.html' %}
+
+
+{% block content %}
+
+{% include 'components/templates/v-item.html' %}
+{% include 'components/templates/v-table.html' %}
+{% include 'components/templates/v-spinner.html' %}
+{% include 'components/templates/v-toolbar.html' %}
+{% include 'components/templates/v-modal.html' %}
+
+<div id="app">
+    <v-modal v-show="modalOn" :content="modalContent" :status="modalStatus">
+    </v-modal>
+    <v-toolbar>
+        <div class="tooltip2">
+            <i class="fas fa-check p-3 iconhover" @click="updateShippingInfo()"></i>
+            <span class="tooltiptext2 fade-in">Confirm</span>
+        </div>
+    </v-toolbar>
+    <div class="row">
+        <div class="col-6">
+            <v-table :filtered="batches" :labels="myLabels" :pk="key" @select-row="selectedRow"
+                :selected-item="selected">
+            </v-table>
+        </div>
+        <div class="col-6">
+            <div v-if="selected" class="fade-in">
+                <!-- ${shippingInfoFinder()} -->
+                <div class="m-3">
+                    <label for="height-range" class="form-label">Height
+                        <span class="badge badge-warning">${selectedShippingInfo.height} mm</span>
+
+                    </label>
+                    <input class="form-range" v-model="selectedShippingInfo.height" id="height-range" type="range" name="range" min="0" max="500" style="width: 100%">
+                </div>
+                <div class="m-3">
+                    <label for="width-range" class="form-label">Width
+                         <span class="badge badge-warning">${selectedShippingInfo.width} mm</span>
+                        </label>
+                    <input class="form-range" v-model="selectedShippingInfo.width" id="width-range" type="range" name="range" min="0" max="500" style="width: 100%">
+                </div>
+                <div class="m-3">
+                    <label for="length-range" class="form-label">Length
+                        <span class="badge badge-warning">${selectedShippingInfo.length} mm</span>
+
+                    </label>
+                    <input class="form-range" v-model="selectedShippingInfo.length" id="length-range" type="range" name="range" min="0" max="500" style="width: 100%">
+                </div>
+                <div class="m-3">
+                    <label for="weight-range" class="form-label">Weight
+                        <span class="badge badge-warning">${selectedShippingInfo.weight} g</span>
+
+                    </label>
+                    <input class="form-range" v-model="selectedShippingInfo.weight" id="weight-range" type="range" name="range" min="0" max="500" style="width: 100%">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+{% include 'components/registeration/v-components.html' %}
+<script>
+    var app = new Vue({
+        el: '#app',
+        delimiters: ['${', '}'],
+        data: {
+            batches: [],
+            shippingInfos: [],
+            myLabels: [
+                ["Batch ID", "id"],
+                ["Product ID", "product"],
+                ["Quantity", "quantity"],
+                ["Price", "price"],
+            ],
+            key: 'id',
+            selected: null,
+            selectedShippingInfo: null,
+            modalContent: '',
+            // loading: true,
+            modalStatus: '',
+            modalOn: false,
+        },
+        methods: {
+            showModal(status, content, timeout = 2000) {
+                this.modalOn = true;
+                this.modalContent = content
+                this.modalStatus = status
+                setTimeout(() => {
+                    this.modalOn = false
+                }, timeout);
+            },
+            selectedRow(item) {
+                if (this.selected !== item) {
+                    this.selected = item
+                    this.shippingInfoFinder()
+
+                } else {
+                    this.selected = null
+                }
+                // this.selected = item;
+
+            },
+            shippingInfoFinder() {
+                const shippingInfo = this.shippingInfos.find(el => {
+                    if(el.id==this.selected.shipping_info) {
+                        return true
+                    }
+                })
+                this.selectedShippingInfo = shippingInfo 
+                return shippingInfo
+            },
+            async updateShippingInfo() {
+                axios.defaults.xsrfCookieName = 'csrftoken';
+                axios.defaults.xsrfHeaderName = 'X-CSRFToken';
+
+                await axios({
+                    method: 'post',
+                    url: `/inventory/shipping-info-update`,
+                    xstfCookieName: 'csrftoken',
+                    xsrfHeaderName: 'X-CSRFToken',
+                    data: this.selectedShippingInfo,
+                    headers: {
+                        'X-CSRFToken': 'csrftoken',
+                    }
+                }).then(response => this.showModal('success', response.data))
+                this.selected = null;
+                this.selectedShippingInfo = null;
+            },
+            async init() {
+                axios.defaults.xsrfCookieName = 'csrftoken';
+                axios.defaults.xsrfHeaderName = 'X-CSRFToken';
+
+                await axios
+                    .get(`/purchase/batch-list`)
+                    .then(response => (this.batches = response.data))
+
+                await axios
+                    .get(`/inventory/shipping-infos-list`)
+                    .then(response => (this.shippingInfos = response.data))
+
+
+            }
+        },
+        mounted() {
+            this.init()
+        }
+
+
+    })
+</script>
+
+
+{% endblock %}

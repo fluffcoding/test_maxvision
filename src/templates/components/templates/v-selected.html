@@ -1,0 +1,13 @@
+<script type="text/x-template" id="v-selected">
+<p class="">
+    <span class="ms-5">Selected:</span>
+    <span class="text-white bg-dark ml-2 p-1 pl-2 pr-2" v-for="(key, index) in Object.entries(selections)" :key="index"  v-if="key[1][0]" style="border-radius: 5rem;">
+            <span style="font-size: 12px;">
+                ${key[0]}:
+            </span>
+            <b style="font-size: 15px;">
+                ${key[1][0]} ${key[1][1]} ${key[1][2]}
+            </b>
+    </span>
+</p>
+</script>

@@ -1,0 +1,248 @@
+{% extends 'base.html' %}
+
+{% load static %}
+
+
+{% block content %}
+
+<link rel="stylesheet" href="{% static 'css/test.css' %}">
+<link rel="stylesheet" href="{% static 'css/dataTables.min.css' %}">
+
+{% include 'components/templates/v-item.html' %}
+{% include 'components/templates/v-table.html' %}
+{% include 'components/templates/v-spinner.html' %}
+{% include 'components/templates/v-toolbar.html' %}
+{% include 'components/templates/v-modal.html' %}
+
+    <h1> Test Pagina</h1>
+
+<button id="button">Row count</button>
+ <div class="row">
+                <div class="col-3">
+    <table id="example" class="display" style="width:100%">
+           <thead>
+                <tr>
+                    <th>date</th>
+                 </tr>
+
+            </thead>
+               <tbody>  
+                    <tr > 
+                        <td>Tiger Nixon</td> 
+
+                    </tr>
+
+                    <tr > 
+                        <td>Garrett Winters</td> 
+
+                    </tr>
+                    <tr > 
+                        <td>Mashood</td> 
+
+                    </tr>
+                 </tbody>
+
+
+    </table>
+</div>
+
+                <div class="col-3">
+    <table id="example2" class="display" style="width:100%">
+
+
+    </table>
+</div>
+</div>
+
+
+
+<div id="events">
+        Event summary - new events added at the top
+    </div>
+
+<div class="mt-3">
+    <div class="custom-control custom-checkbox">
+        <input type="checkbox" class="custom-control-input" id="customCheck1">
+        <label class="custom-control-label" for="customCheck1">Check this custom checkbox</label>
+    </div>
+    <div class="custom-control custom-checkbox">
+        <input type="checkbox" class="custom-control-input" id="customCheck2">
+        <label class="custom-control-label" for="customCheck2">Check this custom checkbox</label>
+    </div>
+  <div class="custom-control custom-checkbox  custom-checkbox-warning mb-2">
+    <input type="checkbox" class="custom-control-input" id="customCheckcolor4" checked>
+    <label class="custom-control-label" for="customCheckcolor4">Warning Checkbox</label>
+</div>
+
+<button type="button" class="btn btn-success btn-rounded">Success</button>
+
+{% include 'components/registeration/v-components.html' %}
+
+
+<script
+  src="https://code.jquery.com/jquery-3.5.1.js"></script>
+
+  <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.10.25/js/jquery.dataTables.js"></script>
+<script type="text/javascript" src="https://cdn.datatables.net/v/bs5/jq-3.3.1/dt-1.10.25/datatables.min.js"></script>
+
+<script
+  src="https://cdn.datatables.net/select/1.3.3/js/dataTables.select.min.js"></script>
+
+<script src="{% static 'js/dataTables.select.min.js' %}"></script>
+
+<script>
+
+
+var namen = [
+        {
+            "name":       "Tiger Nixon",
+           
+
+        },
+        {
+            "name": "Garrett Winters",
+
+
+        },
+          {
+            "name": "Mashood",
+
+
+        },
+        // ...
+    ]
+var selectedRows = []
+var gekozen = []
+
+
+
+var table2 = $('#example2').dataTable( {
+    select: true,
+             paging: false,
+            searching: false,
+             destroy: true,
+
+    "data": gekozen,
+    "columns": [
+        { "data": "name" },
+       
+
+    ]
+} );
+
+
+
+$(document).ready(function() {
+    var events = $('#events');
+
+
+    var table = $('#example').DataTable( {
+            select: true,
+             paging: false,
+            searching: false
+             } );
+    
+    table
+        .on( 'select', function ( e, dt, type, indexes ) {
+           var rowData = table.row( indexes ).data();
+
+           selectedRows.push(rowData)
+           // if rowData
+           
+            events.prepend( '<div><b>'+type+' selection</b> - '+JSON.stringify( selectedRows )+'</div>' );
+
+     gekozen = []
+
+  
+for (var i = 0; i < selectedRows.length; i++) {
+
+ selected =  namen.filter(namen =>  namen.name == selectedRows[i][0]) 
+ gekozen.push(selected[0])
+ console.log(selectedRows[i][0])
+ events.prepend( '<div><b>'+type+' selection</b> - '+JSON.stringify( "gekozen :" + gekozen[0]["name"])+'</div>' );
+ 
+}
+
+ ;
+
+
+
+ $('#example2').dataTable( {
+    select: true,
+             paging: false,
+            searching: false,
+             destroy: true,
+
+    "data": gekozen,
+    "columns": [
+        { "data": "name" },
+       
+
+    ]
+} );
+
+
+
+        } )
+       .on( 'deselect', function ( e, dt, type, indexes ) {
+            //var rowData = table.row( indexes ).data();
+            var rowData = table.rows( { selected: true } ).data();
+            events.prepend( '<div><b>'+type+' <i>de</i>selection</b> - '+JSON.stringify( rowData.length )+'</div>' );
+            events.prepend( '<div><b>'+type+' <i>de</i>selection</b> - '+JSON.stringify( rowData )+'</div>' );
+            
+            gekozen = []
+            selectedRows = []
+            if( rowData.length  > 0){ 
+                for (var i = 0; i < rowData.length ; i++) {
+                    test1 = rowData[i][0]
+
+                    events.prepend( '<div><b>'+type+' <i>de</i>selection</b> - '+JSON.stringify( test1 )+'</div>' );
+                    gekozen.push({ "name": test1 });
+                    };
+
+                    events.prepend( '<div><b>'+type+' <i>de</i>selection</b> - '+JSON.stringify( gekozen )+'</div>' );
+             $('#example2').dataTable( {
+    select: true,
+             paging: false,
+            searching: false,
+             destroy: true,
+
+    "data": gekozen,
+    "columns": [
+        { "data": "name" },
+       
+
+    ]
+} )}
+             
+             else{$('#example2').dataTable( {
+                                             select: true,
+                                             paging: false,
+                                            searching: false,
+                                             destroy: true,
+
+                                            "data": [],
+                                            "columns": [
+                                                { "data": "name" },
+                                               
+
+    ]
+} );
+}
+                 
+           
+           ;
+               
+
+          
+          } )  
+            
+        
+
+
+} );
+
+
+</script>
+
+{% endblock %}

@@ -1,0 +1,31 @@
+<script type="text/x-template" id="single-item">
+    <div class="list-container">
+        <div class=" item " :class="{expanded: isOpen,}" style="width: 10rem;"
+                @click="toggleOpen"
+                v-if="isRoot && item.key"
+            >
+            <input @click="selectItem(item)" type="checkbox" class="" value="">
+            <div class="inner-item">
+            <span v-if="item.key">
+                
+            ${item.key}
+            <span class="badge badge-warning">${childrenCount()}</span>
+            
+        </span>
+            <!-- <span v-else>
+                ${item.product_characteristics_reference}
+
+            </span> -->
+            </div>
+        </div>
+        <div class="list" v-show="isOpen" v-if="isParent">
+            <tree-item
+            v-for="(child, index) in item.values"
+            :key="child.key"
+            :item="child"
+            @selected-item="$emit('selected-item', $event)"
+            :hierarchy="hierarchy"
+            ></tree-item>
+        </div>
+    </div>
+</script>

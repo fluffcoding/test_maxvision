@@ -1,0 +1,620 @@
+{% extends 'base.html' %}
+
+
+{% load static %}
+
+{% block content %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.0/FileSaver.min.js"
+    integrity="sha512-csNcFYJniKjJxRWRV1R7fvnXrycHP6qDR21mgz1ZP55xY5d+aHLfo9/FcGDQLfn2IfngbAHd8LdfsagcCqgTcQ=="
+    crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdn.jsdelivr.net/npm/json2csv"></script>
+<link rel="stylesheet" href="{% static 'css/bg_treeview.css' %}">
+{% include 'components/templates/v-item.html' %}
+{% include 'components/templates/v-table.html' %}
+{% include 'components/templates/v-spinner.html' %}
+{% include 'components/templates/v-toolbar.html' %}
+{% include 'components/templates/v-modal.html' %}
+<div id="app">
+    <v-modal v-show="modalOn" :content="modalContent" :status="modalStatus">
+    </v-modal>
+    <v-toolbar>
+        <!-- <div class="tooltip2">
+            <i class="fas fa-edit p-3 iconhover" @click="updateItem()"></i>
+            <span class="tooltiptext2 fade-in">Update</span>
+        </div> -->
+        <div class="tooltip2">
+            <i class="fas fa-plus p-3 iconhover" @click="createBatchGroup=!createBatchGroup"></i>
+            <span class="tooltiptext2 fade-in">New BG</span>
+        </div>
+        <div class="tooltip2">
+            <i class="fas fa-redo p-3 iconhover" @click="refreshEverything()"></i>
+            <span class="tooltiptext2 fade-in">Refresh</span>
+        </div>
+        <div class="tooltip2">
+            <i class="fas fa-unlink p-3 iconhover" @click="removeSelectedfromBG()"></i>
+            <span class="tooltiptext2 fade-in">Remove Batch</span>
+        </div>
+        <div class="tooltip2">
+            <i class="fas fa-file-excel p-3 iconhover" @click="downloadAsExcel()"></i>
+            <span class="tooltiptext2 fade-in">Export</span>
+        </div>
+        <div class="tooltip2">
+            <i class="fas fa-check p-3 iconhover" @click="confirmedPage()"></i>
+            <span class="tooltiptext2 fade-in">Confirm</span>
+        </div>
+    </v-toolbar>
+
+    <div class="row">
+        <div class="col-4">
+            <div class="card" style="max-height: 300px;">
+                <p style="font-weight: 700; font-size: 15px;" class="p-1 bg-dark text-white">
+                    <span style="margin-right: 1rem"> </span>
+                    <span style="margin-right: 4rem">Status</span>
+                    <span style="margin-right: 4rem">Supplier</span>
+                    <span style="margin-right: 4rem">ID</span>
+                    <span>Date</span>
+                </p>
+                <div v-if="loading" class="text-center ">
+                    <div>
+                        <v-spinner></v-spinner>
+                    </div>
+                </div>
+                <div class="tree-container mb-3" v-else>
+                    <tree-item :item="treeData" @selected-item="addToSelected" :hierarchy="hier"></tree-item>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="col-8">
+            <v-table :filtered="filteredItems()" :labels="myLabels" :pk="key" @select-row="selectedRow"
+                :selected-item="selected">
+            </v-table>
+
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-4">
+
+        </div>
+        <div class="col-8">
+            <div class="card">
+                <div class="p-3">
+                    <div class="form-row m-3" v-if="batchSelected">
+                        <div class="form-group col-md-1">
+                            <label for="id" class="col-form-label">ID</label>
+                            <input type="number" class="form-control" id="id" v-model="batchSelected.id" disabled>
+                        </div>
+                        <div class="form-group col-md-1">
+                            <label for="product_id" class="col-form-label">Product ID</label>
+                            <input type="number" class="form-control" id="product_id" v-model="batchSelected.product"
+                                disabled>
+                        </div>
+                        <div class="form-group col-md-3">
+                            <label for="price" class="col-form-label">Price</label>
+                            <input type="number" class="form-control" id="price" v-model="batchSelected.price">
+                        </div>
+                        <div class="form-group col-md-3">
+                            <label for="quantity" class="col-form-label">Quantity</label>
+                            <input type="number" class="form-control" id="quantity" v-model="batchSelected.quantity">
+                        </div>
+                        <div class="form-group col-md-2">
+                            <label for="quantity" class="col-form-label">Total Price</label>
+                            <input type="number" class="form-control" disabled id="total_price"
+                                :value="batchSelected.price*batchSelected.quantity">
+                        </div>
+
+
+                        <div class="form-group col-md-2">
+                            <button class="btn btn-success mt-4" @click="updateBatch()">
+                                <i class="far fa-check-circle"></i>Update
+                            </button>
+                        </div>
+                    </div>
+                    <p class="lead" v-else>Select a batch to edit.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-6">
+            <div class="card">
+                <p style="font-weight: 700; font-size: 15px;" class="p-1 bg-dark text-white">
+                    <span style="margin-right: 3rem"> </span>
+                    <span style="margin-right: 4rem">Cat.</span>
+                    <span style="margin-right: 3rem">Product</span>
+                    <span style="margin-right: 2rem">Stock</span>
+                    <span style="margin-right: 2rem">Forecast</span>
+                    <span style="margin-right: 2rem">Less than</span>
+                    <span>Est. $</span>
+                </p>
+                <div>
+
+                    <div class="row">
+                        <div class="col-11">
+                            <div v-if="batchLoading" class="text-center ">
+                                <div>
+                                    <v-spinner></v-spinner>
+                                </div>
+                            </div>
+                            <div class="tree-container mb-3" v-else>
+                                <tree-item :item="batchTreeData" @selected-item="batchAddToSelected"
+                                    :hierarchy="batchHier">
+                                </tree-item>
+                            </div>
+                        </div>
+                        <div class="col-1">
+                            <button class="btn btn-success p-2" style="border-radius: 50%; height: 50px; width: 50px;"
+                                @click="addSelectedToBG()"><i class="fas fa-arrow-right"></i></button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+        <div class="col-6">
+            <div class="card" v-if="createBatchGroup">
+                <div class="form-row m-3">
+                    <div class="form-group col-md-2">
+                        <label for="id" class="col-form-label">ID</label>
+                        <input type="number" class="form-control" id="id" :value="rawData.length+1" disabled>
+                    </div>
+                    <div class="form-group col-md-4">
+                        <label for="supplier" class="col-form-label">Supplier</label>
+                        <select class="custom-select mb-3" id="supplier" v-model="newBG.name">
+                            <option v-for="supplier in suppliersList">${supplier.name}</option>
+                        </select>
+                    </div>
+                    <div class="form-group col-md-4">
+                        <label class="col-form-label" for="date">Date</label>
+                        <input class="form-control" id="date" type="date" v-model="newBG.date">
+                    </div>
+                    <div class="form-group col-md-2">
+                        <button class="btn btn-success mt-4" @click="createBG()">
+                            <i class="far fa-check-circle"></i>Create
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div v-else>
+                <v-table :filtered="filteredBatch()" :labels="batchLabels" :pk="batchKey" @select-row="batchSelectedRow"
+                    :selected-item="batchSelected">
+                </v-table>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% include 'components/registeration/v-components.html' %}
+<script>
+
+
+    var app = new Vue({
+        el: '#app',
+        delimiters: ['${', '}'],
+        data: {
+            createBatchGroup: false,
+            hier: {},
+            treeData: {},
+            rawData: [],
+            myLabels: [
+                ["ID", "bg_id"],
+                ["Payment Status", "payment_status"],
+                ["Transport Status", "transport_status"],
+                ["Import Status", "import_status"],
+                // ["Purchase Price", "product_id"],
+                ["Expected Delivery Date", "expected_delivery_date"],
+                ["Receipt Date", "receipt_date"],
+                ["Total Price", "total_price"],
+            ],
+            key: "id",
+            selected: null,
+            searchText: '',
+            modalContent: '',
+            loading: true,
+            modalStatus: '',
+            modalOn: false,
+            categoryClassification: [],
+            selectedCategory: null,
+            selectedNodes: [],
+            batchData: [],
+            batchTreeData: {},
+            batchLoading: true,
+            batchHier: {},
+            batchSelectedNodes: [],
+            batchSelected: null,
+            batchLabels: [
+                ["Batch ID", 'id'],
+                ["Product ID", "product"],
+                // ["Latest Batch ID", "latest_batch_id"],
+                // ["Category", "category"],
+                // ["Product Reference", "characteristics_reference"],
+                ["Quantity", "quantity"],
+                ["Price ($)", "price"],
+                ["Total Price ($)", "total_price"],
+                // ["Receipt Date", "weight"],
+                // ["Receipt Date", "purchase status"],
+                // ["Receipt Date", "expected_receipt"],
+                // ["Receipt Date", "receipt_date"],
+            ],
+            batchKey: 'id',
+            childrenBatches: [],
+            suppliersList: [],
+            newBG: {},
+            allBatches: [],
+            addToBG: [],
+            initialState: null,
+        },
+        methods: {
+            confirmedPage() {
+                window.open(`/purchase/confirm-bg/${this.selected.id}`)
+            },
+            downloadAsExcel() {
+                const items = (this.filteredBatch())
+                // const { Parser } = require('json2csv');
+                const replacer = (key, value) => value === null ? '' : value // specify how you want to handle null values here
+                // const header = ["ID","Product ID","Quantity", "Price per unit", "Total Price"]
+                // console.log(header2)
+                const header = Object.keys(items[0])
+                // console.log(header)
+                const csv = [
+                    header.join(','), // header row first
+                    ...items.map(row => header.map(fieldName => JSON.stringify(row[fieldName], replacer).replace(/\\"/g, '""')).join(','))
+                ].join('\r\n')
+                var blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+                saveAs(blob, `BG${this.selected.id}_export.csv`);
+                // console.log(csv)
+
+                //                 console.log(batchesData)
+                //                 var workbook = new Excel.Workbook();
+                //                 workbook.addWorksheet("asd").getCell("A2").value = "this is value of A2";
+                //                 var json = JSON.stringify(workbook.model);
+
+                //                 var workbook2 = new Excel.Workbook();
+                //                 workbook2.model = JSON.parse(json);
+                //                 console.log(workbook2.getWorksheet("asd").getCell("A2").value);
+            },
+            refreshEverything() {
+                this.createBatchGroup = false
+                this.hier = {}
+                this.treeData = {}
+                this.rawData = []
+                this.myLabels = [
+                    ["ID", "bg_id"],
+                    ["Payment Status", "payment_status"],
+                    ["Transport Status", "transport_status"],
+                    ["Import Status", "import_status"],
+                    // ["Purchase Price", "product_id"],
+                    ["Expected Delivery Date", "expected_delivery_date"],
+                    ["Receipt Date", "receipt_date"],
+                    ["Total Price", "total_price"],
+                ]
+                this.key = "id"
+                this.selected = null
+                this.searchText = ''
+                this.modalContent = ''
+                this.loading = true
+                this.modalStatus = ''
+                this.modalOn = false
+                this.categoryClassification = []
+                this.selectedCategory = null
+                this.selectedNodes = []
+                this.batchData = []
+                this.batchTreeData = {}
+                this.batchLoading = true
+                this.batchHier = {}
+                this.batchSelectedNodes = []
+                this.batchSelected = null
+                this.batchLabels = [
+                    ["Batch ID", 'id'],
+                    ["Product ID", "product"],
+                    // ["Latest Batch ID", "latest_batch_id"],
+                    // ["Category", "category"],
+                    // ["Product Reference", "characteristics_reference"],
+                    ["Quantity", "quantity"],
+                    ["Price ($)", "price"],
+                    ["Total Price ($)", "total_price"],
+                    // ["Receipt Date", "weight"],
+                    // ["Receipt Date", "purchase status"],
+                    // ["Receipt Date", "expected_receipt"],
+                    // ["Receipt Date", "receipt_date"],
+                ]
+                this.batchKey = 'id'
+                this.childrenBatches = []
+                this.suppliersList = []
+                this.newBG = {}
+                this.allBatches = []
+                this.addToBG = []
+                this.initialState = null
+                this.init()
+
+            },
+            async updateBatch() {
+                axios.defaults.xsrfCookieName = 'csrftoken';
+                axios.defaults.xsrfHeaderName = 'X-CSRFToken';
+
+                await axios({
+                    method: 'post',
+                    url: `/purchase/batch-update`,
+                    xstfCookieName: 'csrftoken',
+                    xsrfHeaderName: 'X-CSRFToken',
+                    data: this.batchSelected,
+                    headers: {
+                        'X-CSRFToken': 'csrftoken',
+                    }
+                }).then(response => this.showModal('success', response.data))
+                // this.refreshItems()
+            },
+            async addSelectedToBG() {
+                var commonLeaves = []
+                var allLeaves = []
+                this.batchSelectedNodes.forEach(function (el) {
+                    allLeaves.push(el.leaves())
+                })
+                commonLeaves = (_.intersection(...allLeaves))
+                var filtered = []
+                commonLeaves.forEach(el => {
+                    filtered.push(el.data.latest_batch_id)
+                })
+                this.addToBG.push(filtered)
+                this.addToBG = _.compact(_.flatten(this.addToBG))
+                var data = {
+                    'batch_id': this.addToBG,
+                    'bg_id': this.selected.id
+                }
+                await axios({
+                    method: 'post',
+                    url: '/purchase/batch-group-edit',
+                    xstfCookieName: 'csrftoken',
+                    xsrfHeaderName: 'X-CSRFToken',
+                    data: data,
+                    headers: {
+                        'X-CSRFToken': 'csrftoken',
+                    }
+                }).then(response => console.log(response.data));
+
+                // console.log("The line below could be problematic")
+                this.selected.batches.push(...this.addToBG)
+
+            },
+            async removeSelectedfromBG() {
+                // var commonLeaves = []
+                // var allLeaves = []
+                // this.batchSelectedNodes.forEach(function (el) {
+                //     allLeaves.push(el.leaves())
+                // })
+                // commonLeaves = (_.intersection(...allLeaves))
+                // var filtered = []
+                // commonLeaves.forEach(el => {
+                //     filtered.push(el.data.latest_batch_id)
+                // })
+                // this.addToBG.push(filtered)
+                // this.addToBG = _.compact(_.flatten(this.addToBG))
+                var data = {
+                    'batch_id': this.batchSelected.id,
+                    // 'batch_id': this.addToBG,
+                    'bg_id': this.selected.id,
+                    'remove': true,
+                }
+                await axios({
+                    method: 'post',
+                    url: '/purchase/batch-group-edit',
+                    xstfCookieName: 'csrftoken',
+                    xsrfHeaderName: 'X-CSRFToken',
+                    data: data,
+                    headers: {
+                        'X-CSRFToken': 'csrftoken',
+                    }
+                }).then(response => console.log(response.data));
+
+                // console.log("The line below could be problematic")
+                this.selected.batches = _.flatten(this.selected.batches)
+                this.selected.batches = _.pull(this.selected.batches, this.batchSelected.id)
+                // this.filteredBatch()
+                // this.selected.batches.pop(this.batchSelected.id)
+
+                // this.selected.batches.push(this.addToBG)
+
+            },
+            showModal(status, content, timeout = 2000) {
+                this.modalOn = true;
+                this.modalContent = content
+                this.modalStatus = status
+                setTimeout(() => {
+                    this.modalOn = false
+                }, timeout);
+            },
+            filteredBatch() {
+                if (this.selected) {
+                    var filtered = this.allBatches.filter(el => {
+                        if (this.selected.batches.includes(el.id)) {
+                            return true;
+                        }
+                    })
+                    return filtered;
+                }
+                // var childBatches = [];
+                // childBatches.push(this.addToBG)
+                // if (this.selected) {
+                //     childBatches.push(this.selected.batches)
+                //     childBatches = _.flatten(childBatches)
+                //     // console.log(childBatches)
+
+                //     var filtered = this.allBatches.filter(el => {
+                //         if (childBatches.includes(el.id)) {
+                //             // console.log(el)
+                //             return true
+                //         }
+                //     })
+                //     // console.log(filtered)
+                //     // this.childrenBatches.push(filtered)
+                //     return filtered
+                // }
+                else {
+                    return []
+                }
+            },
+            filteredItems() {
+                var commonLeaves = []
+                var allLeaves = []
+                this.selectedNodes.forEach(function (el) {
+                    allLeaves.push(el.leaves())
+                })
+                commonLeaves = (_.intersection(...allLeaves))
+                var filtered = []
+                commonLeaves.forEach(el => {
+                    filtered.push(el.data)
+                })
+                return filtered
+            },
+            selectedRow(item) {
+                if (this.selected !== item) {
+                    this.selected = item
+                } else {
+                    this.selected = null
+                }
+                // this.selected = item;
+
+            },
+            batchSelectedRow(item) {
+                if (this.batchSelected !== item) {
+                    this.batchSelected = item
+                } else {
+                    this.batchSelected = null
+                }
+                // this.selected = item;
+            },
+            batchAddToSelected(item) {
+                var myNode = this.batchHier.descendants().find(node => {
+                    if (node.data == item) {
+                        return true
+                    }
+                })
+                if (this.batchSelectedNodes.includes(myNode)) {
+                    this.batchSelectedNodes.pop(myNode)
+                } else {
+                    if (_.flattenDeep(this.multiselectedNodes).includes(myNode)) {
+                    } else {
+                        this.batchSelectedNodes.push(myNode)
+
+                    }
+                }
+            },
+            addToSelected(item) {
+                var myNode = this.hier.descendants().find(node => {
+                    if (node.data == item) {
+                        return true
+                    }
+                })
+                if (this.selectedNodes.includes(myNode)) {
+                    this.selectedNodes.pop(myNode)
+                } else {
+                    if (_.flattenDeep(this.multiselectedNodes).includes(myNode)) {
+                    } else {
+                        this.selectedNodes.push(myNode)
+
+                    }
+                }
+            },
+            async createBG() {
+                await axios({
+                    method: 'post',
+                    url: '/purchase/supplier-create',
+                    xstfCookieName: 'csrftoken',
+                    xsrfHeaderName: 'X-CSRFToken',
+                    data: this.newBG,
+                    headers: {
+                        'X-CSRFToken': 'csrftoken',
+                    }
+                }).then(response => this.showModal('success', response.data));
+                this.refreshEverything()
+
+            },
+            async init() {
+                axios.defaults.xsrfCookieName = 'csrftoken';
+                axios.defaults.xsrfHeaderName = 'X-CSRFToken';
+
+                await axios
+                    .get('/purchase/batch-list')
+                    .then(response => (this.allBatches = response.data))
+
+                await axios
+                    .get('/purchase/suppliers-list')
+                    .then(response => (this.suppliersList = response.data))
+
+                await axios
+                    .get('/purchase/product-batch-list')
+                    .then(response => (this.batchData = response.data))
+                // this.categoryClassification = (Array.from(d3.group(this.rawData, d => d.product_category)))
+
+                var nester = d3.nest()
+
+                // Hierarchy on the basis of
+
+                var keys = nester.key(item => item.category)
+                    .key(item => item.characteristics_reference)
+
+                // Processing the Rest API data through d3
+
+                var entry = nester.entries(this.batchData)
+
+
+                var tree = {
+                    'key': '',
+                    'on': true,
+                    'values': entry
+                }
+
+
+                // this.treeData = tree
+
+                var h = d3.hierarchy(tree, item => item.values)
+                this.batchTreeData = h.data
+                this.batchLoading = false
+
+                this.batchHier = h
+
+                await axios
+                    .get('/purchase/batch-group-list')
+                    .then(response => (this.rawData = response.data))
+                // this.categoryClassification = (Array.from(d3.group(this.rawData, d => d.product_category)))
+
+                var nester = d3.nest()
+
+                // Hierarchy on the basis of
+
+                var keys = nester.key(item => item.status)
+                    .key(item => item.supplier)
+                    .key(item => item.id)
+                    .key(item => item.order_date)
+
+                // Processing the Rest API data through d3
+
+                var entry = nester.entries(this.rawData)
+
+
+                var tree = {
+                    'key': '',
+                    'on': true,
+                    'values': entry
+                }
+
+
+                // this.treeData = tree
+
+                var h = d3.hierarchy(tree, item => item.values)
+                this.treeData = h.data
+                this.loading = false
+
+                this.hier = h
+            },
+        },
+        mounted() {
+            this.init()
+            // this.initialState = this.$data
+            // console.log(this.$data)
+
+        }
+    });
+</script>
+{% endblock %}

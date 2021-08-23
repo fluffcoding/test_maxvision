@@ -1,0 +1,415 @@
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% block content %}
+
+
+<link rel="stylesheet" href="{% static 'css/treeview.css' %}">
+
+{% include 'components/templates/v-item.html' %}
+{% include 'components/templates/v-table.html' %}
+{% include 'components/templates/v-selected.html' %}
+{% include 'components/templates/v-toolbar.html' %}
+{% include 'components/templates/v-modal.html' %}
+{% include 'components/templates/v-spinner.html' %}
+
+<div id="app">
+    <v-modal v-show="modalOn" :content="modalContent" :status="modalStatus">
+    </v-modal>
+    <div class="row">
+        <div class="col-8">
+            <v-selected :selections="selected"></v-selected>
+        </div>
+        <div class="col-1">
+            <i class="fas fa-redo-alt iconhover2 p-2 ml-3" style="border-radius: 50%; font-size: 22px;"
+                @click="refreshItems()"></i>
+        </div>
+        <div class="col-3">
+            <input class="form-control mb-3" placeholder="Search Customer Name or ID" v-model="searchText" />
+        </div>
+    </div>
+
+    <div class="row">
+        
+        <div class="col-7" style=" margin-left: 0;">
+            <div class="card">
+                <p style="font-weight: 700; font-size: 15px;" class="p-1 bg-dark text-white">
+                    <span style="margin-right: 3rem"> </span>
+                    <span style="margin-right: 6rem">Source</span>
+                    <span style="margin-right: 6rem">Due Date</span>
+                    <span style="margin-right: 6rem">Status</span>
+                    <span style="margin-right: 6rem">Category</span>
+                    <span>Product</span>
+                </p>
+                <div v-if="loading" class="text-center ">
+                    <div>
+                        <v-spinner></v-spinner>
+                        
+                    </div>
+                </div>
+                <div v-else>
+                    <div class="tree-container">
+                        <tree-item :item="treeData" @selected-item="addToSelected" :hierarchy="hier"></tree-item>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+        <div class="col-5">
+            <div v-if="ctrlPressed && multiselectFilter().length>0">
+                <v-table :filtered="multiselectFilter()" :labels="myLabels" :pk="key" @select-row="selectedRow"
+                    :selected-item="selectedItem"></v-table>
+            </div>
+            <div v-else-if="searchText!=''">
+                <v-table :filtered="searchItems()" :labels="myLabels" :pk="key" @select-row="selectedRow"
+                    :selected-item="selectedItem"></v-table>
+            </div>
+            <div v-else>
+                <v-table :filtered="filteredItems()" :labels="myLabels" :pk="key" @select-row="selectedRow"
+                    :selected-item="selectedItem"></v-table>
+            </div>
+        </div>
+    </div>
+    <v-toolbar>
+        <div class="tooltip2">
+            <i class="fas fa-hand-pointer p-3 iconhover" @click="updateItems('selected')"></i>
+            <span class="tooltiptext2 fade-in">Select</span>
+        </div>
+        <div class="tooltip2">
+            <i class="fas fa-paper-plane p-3 iconhover" @click="updateItems('sent')"></i>
+            <span class="tooltiptext2  fade-in">Sent</span>
+        </div>
+        <div class="tooltip2">
+            <i class="fas fa-check p-3 iconhover" @click="updateItems('fulfilled')"></i>
+            <span class="tooltiptext2  fade-in">Fulfilled</span>
+        </div>
+        <div class="tooltip2">
+            <i class="fas fa-spinner p-3 iconhover" @click="updateItems('unfulfilled')"></i>
+            <span class="tooltiptext2  fade-in">Unfulfilled</span>
+        </div>
+        <div class="tooltip2">
+            <i class="fas fa-times p-3 iconhover" @click="updateItems('cancelled')"></i>
+            <span class="tooltiptext2  fade-in">Cancelled</span>
+        </div>
+        <div class="tooltip2">
+            <i class="fas fa-redo p-3 iconhover" @click="updateItems('resent')"></i>
+            <span class="tooltiptext2  fade-in">Resend</span>
+        </div>
+        <div class="tooltip2">
+            <i class="fas fa-print p-3 iconhover" @click="printItems()"></i>
+            <span class="tooltiptext2  fade-in">Print</span>
+        </div>
+    </v-toolbar>
+
+
+    <div v-if="ctrlPressed">
+        <div class="toast align-items-center text-white bg-dark border-0 show fade-in"
+            style=" position: fixed; right: 40rem; min-width: 450px; bottom: 80px;">
+            <div class="d-flex  text-center">
+                <div class="toast-body" style="font-size: 22px;">
+                    Multiselect mode active
+                    <p style="font-size: 16px;">
+                        You have
+                        ${multiselectedNodes.length}
+                        selections. ${multiselectFilter().length} orders filtered based on your selection.
+                    </p>
+                    <button class="btn btn-light" @click="multiselectAnother()">Another selection</button>
+                </div>
+                <!-- <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button> -->
+            </div>
+        </div>
+    </div>
+
+</div>
+
+
+
+    {% include 'components/registeration/v-components.html' %}
+<script>
+
+    // Actual App Instance
+    var app = new Vue({
+        el: '#app',
+        delimiters: ['${', '}'],
+        data() {
+            return {
+                // treeData stores the processed hierarchical data fed to the treeview component
+                treeData: {},
+                // rawData stores the raw order items coming from the rest api
+                rawData: [],
+                // selected basically visually allows displaying the selected items on the frontend
+                selected: {
+                    source: [],
+                    due_date: [],
+                    status: [],
+                    category: [],
+                    product: []
+                },
+                // the item selected in the table is represented by selectedItem
+                selectedItem: null,
+                // selectedNodes stores the nodes of the treeview that have been selected by clicking the checkbox
+                selectedNodes: [],
+                // contains the d3.hierarchy() object for use in utility functions
+                hier: {},
+                // Indicates whether or not ctrl is pressed, used for multiselect mode
+                ctrlPressed: false,
+                // Search Text 
+                searchText: '',
+                // Contains the multiple selections during multiselect mode
+                multiselectedNodes: [],
+                // Allows loading
+                loading: true,
+                // Modal data
+                modalContent: '',
+                modalStatus: '',
+                modalOn: false,
+                // Labels and data fields for table
+                myLabels: [
+                    ["Name", "order_customer_name"],
+                    ["Order #", "order_id"],
+                    ["Item #", "product_id"],
+                    ["Quantity", "quantity"],
+                    ["Status", "order_status"],
+                    // ["Extra Info", "customer.extra_info"],
+                    // ["Last Modified", "last_"]
+                ],
+                // The key to be used within the table
+                key: 'id'
+            }
+        },
+        methods: {
+            selectedRow(item) {
+                if (this.selectedItem !== item) {
+                    this.selectedItem = item
+
+                } else {
+                    this.selectedItem = null
+                }
+                // this.selected = item;
+
+            },
+            showModal(status, content, timeout = 2000) {
+                this.modalOn = true;
+                this.modalContent = content
+                this.modalStatus = status
+                setTimeout(() => {
+                    this.modalOn = false
+                }, timeout);
+            },
+            refreshItems() {
+                this.treeData = {}
+                this.rawData = []
+                this.selected = {
+                    source: [],
+                    due_date: [],
+                    status: [],
+                    category: [],
+                    product: []
+                }
+                this.selectedNodes = []
+                this.hier = {}
+                this.loading = true;
+                this.init()
+            },
+            multiselectAnother() {
+                this.multiselectedNodes.push(this.selectedNodes)
+                this.selectedNodes = []
+
+            },
+            multiselectFilter() {
+                var multiOrders = []
+                this.multiselectedNodes.forEach(selectedNode => {
+                    var allLeaves = []
+                    selectedNode.forEach(function (el) {
+                        allLeaves.push(el.leaves())
+                    })
+                    var intersect = _.intersection(...allLeaves)
+                    intersect.forEach(el => {
+                        multiOrders.push(el.data)
+                    })
+                })
+
+                return multiOrders
+            },
+            searchItems() {
+                var filtered = [...(this.rawData.filter((item) => {
+                    if (item.order_customer_name.toLowerCase().includes(this.searchText.toLowerCase())) {
+                        return true
+                    }
+                    if (item.key == Number(this.searchText)) {
+                        return true
+                    }
+                }))]
+                return filtered
+
+            },
+            multiselectMode() {
+                this.ctrlPressed = !this.ctrlPressed
+            },
+
+            filteredItems() {
+                var commonLeaves = []
+                var allLeaves = []
+                this.selectedNodes.forEach(function (el) {
+                    allLeaves.push(el.leaves())
+                })
+                commonLeaves = (_.intersection(...allLeaves))
+                var filtered = []
+                commonLeaves.forEach(el => {
+                    filtered.push(el.data)
+
+                })
+                return filtered
+            },
+
+            addOrRemoveItem(item, attribute) {
+                if (this.selected[attribute]) {
+                    if (this.selected[attribute].includes(item)) {
+                        this.selected[attribute].pop(item)
+                    } else {
+                        this.selected[attribute].push(item)
+                    }
+                } else {
+                    this.selected[attribute] = []
+                    this.selected[attribute].push(item)
+                }
+            },
+
+            addToSelected(item) {
+                var myNode = this.hier.descendants().find(node => {
+                    if (node.data == item) {
+                        return true
+                    }
+                })
+                if (this.selectedNodes.includes(myNode)) {
+                    this.selectedNodes.pop(myNode)
+                } else {
+                    if (_.flattenDeep(this.multiselectedNodes).includes(myNode)) {
+                    } else {
+                        this.selectedNodes.push(myNode)
+                    }
+                }
+                if (myNode.depth == 1) {
+                    this.addOrRemoveItem(item.key, 'source')
+                }
+                if (myNode.depth == 2) {
+                    this.addOrRemoveItem(item.key, 'due_date')
+                }
+                if (myNode.depth == 3) {
+                    this.addOrRemoveItem(item.key, 'status')
+                }
+                if (myNode.depth == 4) {
+                    this.addOrRemoveItem(item.key, 'category')
+                }
+                if (myNode.depth == 5) {
+                    this.addOrRemoveItem(item.key, 'product')
+                }
+            },
+            selectedItemIDs() {
+                if (this.ctrlPressed) {
+                    var items = this.multiselectFilter()
+                } else {
+                    var items = this.filteredItems();
+                }
+                var orderedProductsIDs = items.map(i => {
+                    return i.id
+                    // previously: return i.order_id (Changing from order to orderedproducts model)
+                })
+                var orderIDs = items.map(i => {
+                    return i.order_id
+                    // previously: return i.order_id (Changing from order to orderedproducts model)
+                })
+
+                let ids = {
+                    'ordered_products': orderedProductsIDs,
+                    'orders': orderIDs
+                }
+
+                return ids
+            },
+            printItems() {
+                const myData = this.selectedItemIDs()
+                axios({
+                    method: 'post',
+                    url: '/order/print/',
+                    xstfCookieName: 'csrftoken',
+                    xsrfHeaderName: 'X-CSRFToken',
+                    data: myData,
+                    headers: {
+                        'X-CSRFToken': 'csrftoken',
+                    }
+                }).then(response => window.open(`/order/print/${response.data}`));
+            },
+
+            async updateItems(changeTo) {
+
+                const updateData = {
+                    "ids": this.selectedItemIDs(),
+                    "change": changeTo,
+
+                };
+                await axios({
+                    method: 'post',
+                    url: '/order/update/',
+                    xstfCookieName: 'csrftoken',
+                    xsrfHeaderName: 'X-CSRFToken',
+                    data: updateData,
+                    headers: {
+                        'X-CSRFToken': 'csrftoken',
+                    }
+                }).then(response => this.showModal('success', response.data));
+                this.refreshItems()
+            },
+            async init() {
+                //setting defaults
+                axios.defaults.xsrfCookieName = 'csrftoken';
+                axios.defaults.xsrfHeaderName = 'X-CSRFToken';
+//http://127.0.0.1:8000
+                await axios
+                    .get('/order/list')
+                    .then(response => (this.rawData = response.data))
+
+                // D3 - Making data hierarchical
+                var nester = d3.nest()
+
+                // Hierarchy on the basis of
+
+                var keys = nester.key(item => item.order_platform)
+                    .key(item => item.due_date)
+                    .key(item => item.order_status)
+                    .key(item => item.product_category)
+                    .key(item => item.product_characteristics_reference)
+                    
+                // Processing the Rest API data through d3
+
+                var entry = nester.entries(this.rawData)
+
+
+                var tree = {
+                    'key': '',
+                    'on': true,
+                    'values': entry
+                }
+
+                var h = d3.hierarchy(tree, item => item.values)
+
+                this.treeData = h.data
+                this.loading = false
+                this.hier = h
+            }
+        },
+
+        async mounted() {
+            this.init()
+            window.onkeydown = (e) => {
+                if (e.key == 'Control') {
+                    this.multiselectMode()
+                }
+            }
+        },
+
+
+    })
+</script>
+{% endblock %}
